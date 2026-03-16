@@ -77,7 +77,8 @@ window.Carrera.app = (function() {
         if (btnMute) {
             btnMute.addEventListener('click', function() {
                 var muted = window.Carrera.audio.toggleMute();
-                btnMute.innerHTML = muted ? '🔇 Sin sonido' : '🔊 Sonido';
+                btnMute.textContent = muted ? '🔇' : '🔊';
+                btnMute.title = muted ? 'Activar sonido' : 'Silenciar';
             });
         }
 
@@ -111,7 +112,7 @@ window.Carrera.app = (function() {
             });
         }
 
-        // Back to title from team
+        // Back to characters from team
         var btnBackChars = document.getElementById('btn-back-characters');
         if (btnBackChars) {
             btnBackChars.addEventListener('click', function() {
@@ -120,11 +121,35 @@ window.Carrera.app = (function() {
             });
         }
 
+        // Keyboard shortcuts for GM
+        document.addEventListener('keydown', function(e) {
+            if (currentScreen !== 'scene') return;
+            if (e.key === 'g' || e.key === 'G') {
+                var panel = document.getElementById('gm-panel');
+                if (panel) panel.classList.toggle('open');
+            }
+            if (e.key === 'f' || e.key === 'F') {
+                window.Carrera.projection.toggle();
+            }
+            if (e.key === 'm' || e.key === 'M') {
+                var muted = window.Carrera.audio.toggleMute();
+                var muteBtn = document.getElementById('btn-mute');
+                if (muteBtn) {
+                    muteBtn.textContent = muted ? '🔇' : '🔊';
+                }
+            }
+        });
+
         showScreen('title');
     }
 
     function showScreen(screenId) {
-        // Hide all screens
+        // Stop audio when going back to title
+        if (screenId === 'title') {
+            window.Carrera.audio.stopAmbient();
+        }
+
+        // Hide all screens with fade
         var screens = document.querySelectorAll('.screen');
         screens.forEach(function(s) {
             s.classList.remove('screen-active');
@@ -142,6 +167,17 @@ window.Carrera.app = (function() {
         if (screenId === 'characters') {
             window.Carrera.characters.renderGrid('character-grid');
             window.Carrera.characters.renderSlots();
+        }
+
+        // Close GM panel when switching screens
+        var gmPanel = document.getElementById('gm-panel');
+        if (gmPanel) gmPanel.classList.remove('open');
+
+        // Clean confetti
+        var confetti = document.getElementById('confetti-container');
+        if (confetti && screenId !== 'scene') {
+            confetti.style.display = 'none';
+            confetti.innerHTML = '';
         }
     }
 

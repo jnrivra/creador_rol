@@ -2,30 +2,34 @@
 window.Carrera = window.Carrera || {};
 
 window.Carrera.audio = (function() {
-    let ctx = null;
-    let masterGain = null;
-    let ambientGain = null;
-    let sfxGain = null;
-    let currentAmbientNodes = [];
-    let initialized = false;
-    let muted = false;
+    var ctx = null;
+    var masterGain = null;
+    var ambientGain = null;
+    var sfxGain = null;
+    var currentAmbientNodes = [];
+    var initialized = false;
+    var muted = false;
 
     function init() {
         if (initialized) return;
-        ctx = new (window.AudioContext || window.webkitAudioContext)();
-        masterGain = ctx.createGain();
-        masterGain.gain.value = 0.7;
-        masterGain.connect(ctx.destination);
+        try {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = ctx.createGain();
+            masterGain.gain.value = 0.7;
+            masterGain.connect(ctx.destination);
 
-        ambientGain = ctx.createGain();
-        ambientGain.gain.value = 0.3;
-        ambientGain.connect(masterGain);
+            ambientGain = ctx.createGain();
+            ambientGain.gain.value = 0.3;
+            ambientGain.connect(masterGain);
 
-        sfxGain = ctx.createGain();
-        sfxGain.gain.value = 0.5;
-        sfxGain.connect(masterGain);
+            sfxGain = ctx.createGain();
+            sfxGain.gain.value = 0.5;
+            sfxGain.connect(masterGain);
 
-        initialized = true;
+            initialized = true;
+        } catch (e) {
+            console.warn('Web Audio API no disponible:', e);
+        }
     }
 
     function resume() {
@@ -68,7 +72,7 @@ window.Carrera.audio = (function() {
             try {
                 if (node.stop) node.stop();
                 if (node.disconnect) node.disconnect();
-            } catch(e) {}
+            } catch (e) {}
         });
         currentAmbientNodes = [];
     }
@@ -104,22 +108,29 @@ window.Carrera.audio = (function() {
         wind.start();
         currentAmbientNodes.push(wind, windFilter, windGain);
 
-        // Birds - periodic chirps
-        startBirdChirps();
+        // Birds - randomized chirps using recursive setTimeout
+        scheduleBirdChirp(1500, 3500);
     }
 
-    function startBirdChirps() {
-        var birdInterval = setInterval(function() {
-            if (!ctx || currentAmbientNodes.length === 0) {
-                clearInterval(birdInterval);
-                return;
-            }
-            playChirp();
-        }, 2000 + Math.random() * 3000);
+    function scheduleBirdChirp(minDelay, maxDelay) {
+        var active = true;
+        var timeoutId = null;
 
-        // Store interval ID for cleanup
-        currentAmbientNodes.push({ stop: function() { clearInterval(birdInterval); }, disconnect: function() {} });
-        playChirp();
+        function chirpLoop() {
+            if (!active || !ctx || currentAmbientNodes.length === 0) return;
+            playChirp();
+            var delay = minDelay + Math.random() * (maxDelay - minDelay);
+            timeoutId = setTimeout(chirpLoop, delay);
+        }
+
+        // Start first chirp soon
+        timeoutId = setTimeout(chirpLoop, 300 + Math.random() * 1000);
+
+        // Store cleanup
+        currentAmbientNodes.push({
+            stop: function() { active = false; clearTimeout(timeoutId); },
+            disconnect: function() {}
+        });
     }
 
     function playChirp() {
@@ -128,22 +139,29 @@ window.Carrera.audio = (function() {
         var osc = ctx.createOscillator();
         var gain = ctx.createGain();
         var baseFreq = 1800 + Math.random() * 1500;
+        var numNotes = 2 + Math.floor(Math.random() * 3);
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(baseFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.3, now + 0.05);
-        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.8, now + 0.1);
-        osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.1, now + 0.15);
 
+        // Create a more natural multi-note chirp
+        var t = now;
+        for (var i = 0; i < numNotes; i++) {
+            var nextFreq = baseFreq * (0.8 + Math.random() * 0.5);
+            osc.frequency.exponentialRampToValueAtTime(nextFreq, t + 0.04);
+            t += 0.04;
+        }
+
+        var totalDur = numNotes * 0.04 + 0.05;
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.08, now + 0.02);
-        gain.gain.linearRampToValueAtTime(0.05, now + 0.1);
-        gain.gain.linearRampToValueAtTime(0, now + 0.2);
+        gain.gain.linearRampToValueAtTime(0.06 + Math.random() * 0.04, now + 0.015);
+        gain.gain.linearRampToValueAtTime(0.04, now + totalDur * 0.6);
+        gain.gain.linearRampToValueAtTime(0, now + totalDur);
 
         osc.connect(gain);
         gain.connect(ambientGain);
         osc.start(now);
-        osc.stop(now + 0.25);
+        osc.stop(now + totalDur + 0.01);
     }
 
     function createRiverAmbient() {
@@ -171,15 +189,31 @@ window.Carrera.audio = (function() {
 
         currentAmbientNodes.push(water, waterFilter, lfo, lfoGain, waterGain);
 
+        // Occasional splash sounds
+        scheduleRandomSound(playSplash, 3000, 6000);
+
         // Soft birds
-        var birdInterval = setInterval(function() {
-            if (!ctx || currentAmbientNodes.length === 0) {
-                clearInterval(birdInterval);
-                return;
-            }
-            if (Math.random() > 0.5) playChirp();
-        }, 4000 + Math.random() * 3000);
-        currentAmbientNodes.push({ stop: function() { clearInterval(birdInterval); }, disconnect: function() {} });
+        scheduleBirdChirp(4000, 8000);
+    }
+
+    function playSplash() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var noise = createNoiseSource('white', 0.5);
+        if (!noise) return;
+        var filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1500 + Math.random() * 1000;
+        filter.Q.value = 2;
+        var gain = ctx.createGain();
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.06, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ambientGain);
+        noise.start(now);
+        noise.stop(now + 0.35);
     }
 
     function createTunnelAmbient() {
@@ -196,16 +230,27 @@ window.Carrera.audio = (function() {
         wind.start();
         currentAmbientNodes.push(wind, windFilter, windGain);
 
-        // Dripping
-        var dripInterval = setInterval(function() {
-            if (!ctx || currentAmbientNodes.length === 0) {
-                clearInterval(dripInterval);
-                return;
-            }
-            playDrip();
-        }, 1500 + Math.random() * 3000);
-        currentAmbientNodes.push({ stop: function() { clearInterval(dripInterval); }, disconnect: function() {} });
-        setTimeout(playDrip, 500);
+        // Dripping with delay (echo effect)
+        scheduleRandomSound(playDrip, 1500, 4000);
+
+        // Subtle eerie tone
+        var eerieOsc = ctx.createOscillator();
+        eerieOsc.type = 'sine';
+        eerieOsc.frequency.value = 120;
+        var eerieGain = ctx.createGain();
+        eerieGain.gain.value = 0.03;
+        var eereLfo = ctx.createOscillator();
+        eereLfo.type = 'sine';
+        eereLfo.frequency.value = 0.1;
+        var eereLfoGain = ctx.createGain();
+        eereLfoGain.gain.value = 0.02;
+        eereLfo.connect(eereLfoGain);
+        eereLfoGain.connect(eerieGain.gain);
+        eerieOsc.connect(eerieGain);
+        eerieGain.connect(ambientGain);
+        eerieOsc.start();
+        eereLfo.start();
+        currentAmbientNodes.push(eerieOsc, eerieGain, eereLfo, eereLfoGain);
     }
 
     function playDrip() {
@@ -215,11 +260,12 @@ window.Carrera.audio = (function() {
         var gain = ctx.createGain();
 
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(2000 + Math.random() * 1000, now);
-        osc.frequency.exponentialRampToValueAtTime(500, now + 0.1);
+        var startFreq = 2000 + Math.random() * 1000;
+        osc.frequency.setValueAtTime(startFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(startFreq * 0.3, now + 0.12);
 
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        gain.gain.setValueAtTime(0.08 + Math.random() * 0.04, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
 
         osc.connect(gain);
         gain.connect(ambientGain);
@@ -243,45 +289,64 @@ window.Carrera.audio = (function() {
         osc.start();
         currentAmbientNodes.push(osc, filter, gain);
 
-        // Echo drips
-        var dripInterval = setInterval(function() {
-            if (!ctx || currentAmbientNodes.length === 0) {
-                clearInterval(dripInterval);
-                return;
-            }
-            if (Math.random() > 0.6) playDrip();
-        }, 3000 + Math.random() * 3000);
-        currentAmbientNodes.push({ stop: function() { clearInterval(dripInterval); }, disconnect: function() {} });
+        // Occasional grumble sounds
+        scheduleRandomSound(playGrumble, 4000, 8000);
+
+        // Rare drips
+        scheduleRandomSound(playDrip, 5000, 10000);
+    }
+
+    function playGrumble() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        var gain = ctx.createGain();
+        var filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 150;
+
+        osc.frequency.setValueAtTime(60, now);
+        osc.frequency.linearRampToValueAtTime(80, now + 0.1);
+        osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.06, now + 0.05);
+        gain.gain.linearRampToValueAtTime(0.03, now + 0.2);
+        gain.gain.linearRampToValueAtTime(0, now + 0.4);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ambientGain);
+        osc.start(now);
+        osc.stop(now + 0.45);
     }
 
     function createTreasureAmbient() {
-        // Shimmer
-        var osc1 = ctx.createOscillator();
-        var osc2 = ctx.createOscillator();
-        osc1.type = 'sine';
-        osc2.type = 'sine';
-        osc1.frequency.value = 880;
-        osc2.frequency.value = 1108.73; // C#6
+        // Shimmer chord
+        var freqs = [880, 1108.73, 1318.5]; // A5, C#6, E6
+        freqs.forEach(function(freq) {
+            var osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            var shimmerGain = ctx.createGain();
+            shimmerGain.gain.value = 0.04;
+            osc.connect(shimmerGain);
+            shimmerGain.connect(ambientGain);
+            osc.start();
+            currentAmbientNodes.push(osc, shimmerGain);
+        });
 
+        // Tremolo LFO on the ambient gain
         var tremolo = ctx.createOscillator();
         var tremoloGain = ctx.createGain();
         tremolo.type = 'sine';
-        tremolo.frequency.value = 4;
-        tremoloGain.gain.value = 0.05;
+        tremolo.frequency.value = 3;
+        tremoloGain.gain.value = 0.15;
         tremolo.connect(tremoloGain);
-
-        var shimmerGain = ctx.createGain();
-        shimmerGain.gain.value = 0.06;
-        osc1.connect(shimmerGain);
-        osc2.connect(shimmerGain);
-        tremoloGain.connect(shimmerGain.gain);
-        shimmerGain.connect(ambientGain);
-
-        osc1.start();
-        osc2.start();
+        tremoloGain.connect(ambientGain.gain);
         tremolo.start();
-
-        currentAmbientNodes.push(osc1, osc2, tremolo, tremoloGain, shimmerGain);
+        currentAmbientNodes.push(tremolo, tremoloGain);
 
         // Gentle wind
         var wind = createNoiseSource('brown', 3);
@@ -289,16 +354,60 @@ window.Carrera.audio = (function() {
         windFilter.type = 'bandpass';
         windFilter.frequency.value = 400;
         var windGain = ctx.createGain();
-        windGain.gain.value = 0.15;
+        windGain.gain.value = 0.12;
         wind.connect(windFilter);
         windFilter.connect(windGain);
         windGain.connect(ambientGain);
         wind.start();
         currentAmbientNodes.push(wind, windFilter, windGain);
+
+        // Sparkle sounds
+        scheduleRandomSound(playSparkle, 800, 2500);
+    }
+
+    function playSparkle() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sine';
+        var freq = 2000 + Math.random() * 3000;
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + 0.05);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.04 + Math.random() * 0.03, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+        osc.connect(gain);
+        gain.connect(ambientGain);
+        osc.start(now);
+        osc.stop(now + 0.18);
     }
 
     function createVictoryAmbient() {
         createTreasureAmbient();
+        scheduleBirdChirp(2000, 5000);
+    }
+
+    // Helper: schedule random recurring sounds
+    function scheduleRandomSound(soundFn, minDelay, maxDelay) {
+        var active = true;
+        var timeoutId = null;
+
+        function loop() {
+            if (!active || !ctx || currentAmbientNodes.length === 0) return;
+            soundFn();
+            var delay = minDelay + Math.random() * (maxDelay - minDelay);
+            timeoutId = setTimeout(loop, delay);
+        }
+
+        timeoutId = setTimeout(loop, minDelay * 0.5 + Math.random() * minDelay);
+
+        currentAmbientNodes.push({
+            stop: function() { active = false; clearTimeout(timeoutId); },
+            disconnect: function() {}
+        });
     }
 
     // --- Sound Effects ---
@@ -309,8 +418,8 @@ window.Carrera.audio = (function() {
         var gain = ctx.createGain();
         osc.type = 'square';
         osc.frequency.value = 800;
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
         osc.connect(gain);
         gain.connect(sfxGain);
         osc.start(now);
@@ -320,19 +429,18 @@ window.Carrera.audio = (function() {
     function playDiceRoll() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Rattle sound
-        for (var i = 0; i < 8; i++) {
-            var t = now + i * 0.06;
+        for (var i = 0; i < 10; i++) {
+            var t = now + i * 0.05;
             var osc = ctx.createOscillator();
             var gain = ctx.createGain();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(200 + Math.random() * 400, t);
-            gain.gain.setValueAtTime(0.1, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+            osc.frequency.setValueAtTime(200 + Math.random() * 500, t);
+            gain.gain.setValueAtTime(0.08 + Math.random() * 0.04, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
             osc.connect(gain);
             gain.connect(sfxGain);
             osc.start(t);
-            osc.stop(t + 0.06);
+            osc.stop(t + 0.05);
         }
     }
 
@@ -348,11 +456,11 @@ window.Carrera.audio = (function() {
             gain.gain.setValueAtTime(0, now + i * 0.15);
             gain.gain.linearRampToValueAtTime(0.15, now + i * 0.15 + 0.05);
             gain.gain.linearRampToValueAtTime(0.08, now + i * 0.15 + 0.4);
-            gain.gain.linearRampToValueAtTime(0, now + 0.8);
+            gain.gain.linearRampToValueAtTime(0, now + 0.9);
             osc.connect(gain);
             gain.connect(sfxGain);
             osc.start(now + i * 0.15);
-            osc.stop(now + 0.9);
+            osc.stop(now + 1.0);
         });
     }
 
@@ -366,14 +474,18 @@ window.Carrera.audio = (function() {
             osc.type = 'sine';
             osc.frequency.value = freq;
             gain.gain.setValueAtTime(0, now + i * 0.12);
-            gain.gain.linearRampToValueAtTime(0.18, now + i * 0.12 + 0.05);
+            gain.gain.linearRampToValueAtTime(0.18, now + i * 0.12 + 0.04);
             gain.gain.linearRampToValueAtTime(0.1, now + i * 0.12 + 0.5);
-            gain.gain.linearRampToValueAtTime(0, now + 1.2);
+            gain.gain.linearRampToValueAtTime(0, now + 1.3);
             osc.connect(gain);
             gain.connect(sfxGain);
             osc.start(now + i * 0.12);
-            osc.stop(now + 1.3);
+            osc.stop(now + 1.4);
         });
+
+        // Add sparkle
+        setTimeout(function() { playSparkle(); }, 300);
+        setTimeout(function() { playSparkle(); }, 500);
     }
 
     function playFailure() {
@@ -403,11 +515,12 @@ window.Carrera.audio = (function() {
         var gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-        osc.frequency.exponentialRampToValueAtTime(200, now + 0.2);
-        osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.linearRampToValueAtTime(0.15, now + 0.2);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.16);
+        osc.frequency.exponentialRampToValueAtTime(900, now + 0.25);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.35);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.linearRampToValueAtTime(0.12, now + 0.2);
         gain.gain.linearRampToValueAtTime(0, now + 0.5);
         osc.connect(gain);
         gain.connect(sfxGain);
@@ -416,13 +529,14 @@ window.Carrera.audio = (function() {
 
         // Slide whistle
         setTimeout(function() {
+            if (!ctx) return;
             var osc2 = ctx.createOscillator();
             var gain2 = ctx.createGain();
             var t = ctx.currentTime;
             osc2.type = 'sine';
             osc2.frequency.setValueAtTime(300, t);
-            osc2.frequency.exponentialRampToValueAtTime(1200, t + 0.15);
-            osc2.frequency.exponentialRampToValueAtTime(300, t + 0.3);
+            osc2.frequency.exponentialRampToValueAtTime(1400, t + 0.12);
+            osc2.frequency.exponentialRampToValueAtTime(250, t + 0.28);
             gain2.gain.setValueAtTime(0.1, t);
             gain2.gain.linearRampToValueAtTime(0, t + 0.35);
             osc2.connect(gain2);
@@ -430,45 +544,82 @@ window.Carrera.audio = (function() {
             osc2.start(t);
             osc2.stop(t + 0.4);
         }, 200);
+
+        // Funny pop
+        setTimeout(function() {
+            if (!ctx) return;
+            var osc3 = ctx.createOscillator();
+            var gain3 = ctx.createGain();
+            var t = ctx.currentTime;
+            osc3.type = 'square';
+            osc3.frequency.setValueAtTime(1000, t);
+            osc3.frequency.exponentialRampToValueAtTime(200, t + 0.08);
+            gain3.gain.setValueAtTime(0.06, t);
+            gain3.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            osc3.connect(gain3);
+            gain3.connect(sfxGain);
+            osc3.start(t);
+            osc3.stop(t + 0.12);
+        }, 450);
     }
 
     function playTriumph() {
         if (!ctx) return;
         var now = ctx.currentTime;
         // Fanfare arpeggio
-        var notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1046.5];
+        var notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 1046.5];
         notes.forEach(function(freq, i) {
             var osc = ctx.createOscillator();
             var gain = ctx.createGain();
             osc.type = 'triangle';
             osc.frequency.value = freq;
-            var t = now + i * 0.12;
+            var t = now + i * 0.1;
             gain.gain.setValueAtTime(0, t);
             gain.gain.linearRampToValueAtTime(0.2, t + 0.03);
-            gain.gain.linearRampToValueAtTime(0.12, t + 0.3);
-            gain.gain.linearRampToValueAtTime(0, now + 1.5);
+            gain.gain.linearRampToValueAtTime(0.12, t + 0.25);
+            gain.gain.linearRampToValueAtTime(0, now + 1.8);
             osc.connect(gain);
             gain.connect(sfxGain);
             osc.start(t);
-            osc.stop(now + 1.6);
+            osc.stop(now + 2.0);
         });
 
-        // Noise burst (cymbal-like)
+        // Cymbal crash
         var noise = createNoiseSource('white', 1);
         if (noise) {
             var nFilter = ctx.createBiquadFilter();
             nFilter.type = 'highpass';
             nFilter.frequency.value = 4000;
             var nGain = ctx.createGain();
-            nGain.gain.setValueAtTime(0, now + 0.5);
-            nGain.gain.linearRampToValueAtTime(0.08, now + 0.55);
-            nGain.gain.linearRampToValueAtTime(0, now + 1.5);
+            nGain.gain.setValueAtTime(0, now + 0.6);
+            nGain.gain.linearRampToValueAtTime(0.1, now + 0.65);
+            nGain.gain.linearRampToValueAtTime(0, now + 1.8);
             noise.connect(nFilter);
             nFilter.connect(nGain);
             nGain.connect(sfxGain);
-            noise.start(now + 0.5);
-            noise.stop(now + 1.6);
+            noise.start(now + 0.6);
+            noise.stop(now + 2.0);
         }
+
+        // Second fanfare after a beat
+        setTimeout(function() {
+            if (!ctx) return;
+            var t = ctx.currentTime;
+            [1046.5, 1318.5, 1568, 2093].forEach(function(freq, i) {
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+                var st = t + i * 0.08;
+                gain.gain.setValueAtTime(0, st);
+                gain.gain.linearRampToValueAtTime(0.15, st + 0.03);
+                gain.gain.linearRampToValueAtTime(0, t + 1.0);
+                osc.connect(gain);
+                gain.connect(sfxGain);
+                osc.start(st);
+                osc.stop(t + 1.2);
+            });
+        }, 1200);
     }
 
     function playClockTick() {
@@ -478,8 +629,8 @@ window.Carrera.audio = (function() {
         var gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.value = 440;
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         osc.connect(gain);
         gain.connect(sfxGain);
         osc.start(now);
@@ -489,14 +640,14 @@ window.Carrera.audio = (function() {
     function playClockAlarm() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0; i < 4; i++) {
             var osc = ctx.createOscillator();
             var gain = ctx.createGain();
             osc.type = 'square';
-            osc.frequency.value = 600;
-            var t = now + i * 0.2;
-            gain.gain.setValueAtTime(0.1, t);
-            gain.gain.linearRampToValueAtTime(0, t + 0.15);
+            osc.frequency.value = 500 + i * 50;
+            var t = now + i * 0.18;
+            gain.gain.setValueAtTime(0.08, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.13);
             osc.connect(gain);
             gain.connect(sfxGain);
             osc.start(t);

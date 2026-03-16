@@ -570,6 +570,27 @@
     color: white !important;
 }
 
+.victory-stats {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.victory-stats span {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.1);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+}
+
+/* === GM Notes whitespace === */
+#gm-notes {
+    white-space: pre-wrap;
+}
+
 /* === Responsive === */
 @media (max-width: 600px) {
     .scene-main {
