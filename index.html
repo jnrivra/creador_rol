@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡A la Carrera! - Aventura de Rol</title>
+    <meta name="description" content="Juego de rol interactivo basado en ¡A la Carrera! (Scurry!) de Devir">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐆</text></svg>">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/characters.css">
+    <link rel="stylesheet" href="css/dice.css">
+    <link rel="stylesheet" href="css/adventure.css">
+    <link rel="stylesheet" href="css/projection.css">
+</head>
+<body>
+
+    <!-- ====== PANTALLA DE TÍTULO ====== -->
+    <section id="screen-title" class="screen screen-active">
+        <div class="title-cloud"></div>
+        <div class="title-cloud"></div>
+        <div class="title-cloud"></div>
+        <div class="title-sun"></div>
+
+        <div class="title-container">
+            <span class="title-emoji">🐆🐈‍⬛</span>
+            <h1 class="title-main">¡A la Carrera!</h1>
+            <p class="title-sub">La Búsqueda del Tesoro de los Titanes</p>
+            <p class="title-desc">Una aventura de rol para pequeños exploradores</p>
+            <button id="btn-start" class="btn-primary">🌟 ¡Comenzar Aventura!</button>
+        </div>
+
+        <div class="title-creatures">
+            <span>🦊</span>
+            <span>🦉</span>
+            <span>🐰</span>
+            <span>🦦</span>
+            <span>🦔</span>
+            <span>🐿️</span>
+        </div>
+    </section>
+
+    <!-- ====== PANTALLA DE PERSONAJES ====== -->
+    <section id="screen-characters" class="screen">
+        <div class="content-wrapper">
+            <h2 class="section-title">🐾 Elige a tus Bestias 🐾</h2>
+
+            <div class="player-slots">
+                <div id="player-slot-1" class="player-slot active-slot">
+                    <div class="slot-empty">
+                        <div class="slot-number">Jugador 1</div>
+                        <div class="slot-hint">Elige un personaje</div>
+                    </div>
+                </div>
+                <div id="player-slot-2" class="player-slot">
+                    <div class="slot-empty">
+                        <div class="slot-number">Jugador 2</div>
+                        <div class="slot-hint">Elige un personaje</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="character-grid" class="character-grid"></div>
+
+            <div class="start-section">
+                <button id="btn-start-adventure" class="btn-start-adventure" disabled>
+                    🏁 ¡Formar equipo!
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== PANTALLA DE EQUIPO ====== -->
+    <section id="screen-team" class="screen">
+        <div class="content-wrapper">
+            <h2 class="section-title">⚔️ Tu Equipo de Aventura ⚔️</h2>
+            <div id="team-summary" class="team-summary"></div>
+            <div class="team-actions">
+                <button id="btn-back-characters" class="btn-secondary">← Cambiar equipo</button>
+                <button id="btn-confirm-team" class="btn-confirm-team">🚀 ¡Empezar la Carrera!</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== PANTALLA DE ESCENA (JUEGO) ====== -->
+    <section id="screen-scene" class="screen">
+        <!-- Background layer -->
+        <div id="scene-background" class="scene-background"></div>
+
+        <!-- Content layer -->
+        <div class="scene-content">
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-left">
+                    <div id="die-display" class="die-indicator die-d8">🎲 <span>d8</span></div>
+                    <div class="clock-container">
+                        <span class="clock-label">Reloj:</span>
+                        <div id="clock-display"></div>
+                    </div>
+                    <span id="scene-counter">Escena 1/5</span>
+                </div>
+                <div class="status-right">
+                    <button id="btn-mute" class="btn-icon" title="Silenciar">🔊</button>
+                    <button id="btn-projection" class="btn-icon" title="Modo Proyección">📺</button>
+                    <button id="btn-gm-panel" class="btn-icon btn-gm-panel-trigger" title="Panel GM">📋</button>
+                </div>
+            </div>
+
+            <!-- Scene Main -->
+            <div class="scene-main">
+                <h2 id="scene-title"></h2>
+                <div id="scene-narrative"></div>
+                <div id="dice-area" class="dice-area"></div>
+                <div id="scene-choices"></div>
+                <div id="outcome-area"></div>
+            </div>
+        </div>
+
+        <!-- GM Panel (drawer) -->
+        <div id="gm-panel" class="gm-panel">
+            <div class="gm-panel-header">
+                <span class="gm-panel-title">📋 Panel del Game Master</span>
+                <button id="btn-gm-close" class="btn-gm-close">✕</button>
+            </div>
+
+            <div class="gm-section">
+                <div class="gm-section-title">Notas de la escena</div>
+                <div id="gm-notes"></div>
+            </div>
+
+            <div class="gm-section">
+                <div class="gm-section-title">Controles manuales</div>
+                <div class="gm-controls">
+                    <button id="btn-clock-fill" class="btn-gm">⏰ +1 Reloj</button>
+                    <button id="btn-clock-empty" class="btn-gm">⏰ -1 Reloj</button>
+                </div>
+            </div>
+
+            <div class="gm-section">
+                <div class="gm-section-title">Volumen</div>
+                <div class="gm-slider-group">
+                    <label class="gm-slider-label">🎵 Ambiente</label>
+                    <input type="range" id="ambient-volume" class="gm-slider" min="0" max="100" value="30">
+                    <label class="gm-slider-label">🔔 Efectos</label>
+                    <input type="range" id="sfx-volume" class="gm-slider" min="0" max="100" value="50">
+                </div>
+            </div>
+        </div>
+
+        <!-- Confetti overlay -->
+        <div id="confetti-container"></div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="js/data/bestiary.js"></script>
+    <script src="js/data/scenes.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/dice.js"></script>
+    <script src="js/clock.js"></script>
+    <script src="js/characters.js"></script>
+    <script src="js/adventure.js"></script>
+    <script src="js/projection.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

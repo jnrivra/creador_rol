@@ -1,0 +1,145 @@
+/* === Modo Proyección === */
+/* Se activa con body.projection */
+
+body.projection {
+    font-size: 24px;
+}
+
+body.projection .gm-panel {
+    display: none !important;
+}
+
+body.projection .btn-gm-panel-trigger {
+    display: none !important;
+}
+
+body.projection #scene-title {
+    font-size: 2.2rem;
+}
+
+body.projection #scene-narrative {
+    font-size: 1.5rem;
+    padding: 2rem;
+    line-height: 1.8;
+}
+
+body.projection .choice-btn {
+    font-size: 1.4rem;
+    padding: 1.3rem 1.5rem;
+    min-height: 90px;
+}
+
+body.projection .choice-emoji {
+    font-size: 2.5rem;
+}
+
+body.projection .die {
+    width: 140px;
+    height: 140px;
+}
+
+body.projection .die-value {
+    font-size: 3.5rem;
+}
+
+body.projection .dice-result {
+    font-size: 2rem;
+}
+
+body.projection .result-emoji {
+    font-size: 2.5rem;
+}
+
+body.projection .clock-segment {
+    width: 28px;
+    height: 28px;
+}
+
+body.projection .status-bar {
+    padding: 1rem 1.5rem;
+}
+
+body.projection .btn-continue {
+    font-size: 1.4rem;
+    padding: 1.1rem 3rem;
+}
+
+body.projection .outcome-text {
+    font-size: 1.4rem;
+    line-height: 1.7;
+}
+
+body.projection .auto-success-banner {
+    font-size: 1.6rem;
+}
+
+body.projection .victory-emoji {
+    font-size: 6rem;
+}
+
+body.projection .victory-message {
+    font-size: 2.2rem;
+}
+
+body.projection .victory-btn {
+    font-size: 1.5rem !important;
+}
+
+/* Character cards in projection */
+body.projection .card-emoji {
+    font-size: 5rem;
+}
+
+body.projection .card-name {
+    font-size: 1.5rem;
+}
+
+body.projection .character-card {
+    padding: 1.5rem;
+}
+
+/* Title screen in projection */
+body.projection .title-main {
+    font-size: 4rem;
+}
+
+body.projection .title-emoji {
+    font-size: 7rem;
+}
+
+body.projection .btn-primary {
+    font-size: 2rem;
+    padding: 1.5rem 4rem;
+}
+
+/* Team summary in projection */
+body.projection .team-emoji {
+    font-size: 4rem;
+}
+
+body.projection .team-card-header h3 {
+    font-size: 1.5rem;
+}
+
+body.projection .tag {
+    font-size: 1rem;
+}
+
+/* Scene backgrounds larger in projection */
+body.projection .bg-forest-clearing::before {
+    font-size: 5rem;
+}
+
+body.projection .bg-den::before {
+    font-size: 6rem;
+}
+
+body.projection .bg-treasure::before {
+    font-size: 5rem;
+}
+
+/* Confetti bigger */
+body.projection .confetti-piece {
+    width: 12px !important;
+    height: 12px !important;
+}

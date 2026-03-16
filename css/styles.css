@@ -1,0 +1,243 @@
+/* === Variables y Reset Global === */
+:root {
+    --green-dark: #2d5a27;
+    --green-mid: #4a7c3f;
+    --green-light: #7fb069;
+    --gold: #f4a261;
+    --gold-light: #e9c46a;
+    --blue-dark: #1a1a2e;
+    --blue-mid: #16213e;
+    --blue-light: #457b9d;
+    --red: #e76f51;
+    --red-light: #f4845f;
+    --purple: #6c3d8e;
+    --white: #fefae0;
+    --white-pure: #ffffff;
+    --text: #264653;
+    --text-light: #5a7d8f;
+    --shadow: rgba(0, 0, 0, 0.15);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --font: 'Segoe UI', 'Comic Sans MS', 'Trebuchet MS', system-ui, sans-serif;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 18px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font);
+    background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 50%, var(--green-light) 100%);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* === Screen System === */
+.screen {
+    display: none;
+    min-height: 100vh;
+    flex-direction: column;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.screen-active {
+    display: flex;
+}
+
+/* === Buttons Base === */
+button {
+    font-family: var(--font);
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* === Title Screen === */
+#screen-title {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(180deg, #87CEEB 0%, #87CEEB 35%, #228B22 35%, #1a6b1a 100%);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.title-container {
+    z-index: 2;
+    position: relative;
+}
+
+.title-emoji {
+    font-size: 5rem;
+    margin-bottom: 1rem;
+    animation: bounce 2s infinite;
+    display: block;
+}
+
+.title-main {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--white);
+    text-shadow: 3px 3px 0 var(--green-dark), 6px 6px 0 rgba(0,0,0,0.2);
+    margin-bottom: 0.5rem;
+    line-height: 1.1;
+}
+
+.title-sub {
+    font-size: 1.3rem;
+    color: var(--gold-light);
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.title-desc {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 2rem;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--red-light) 100%);
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 800;
+    padding: 1.2rem 3rem;
+    border-radius: 50px;
+    box-shadow: 0 6px 20px rgba(231, 111, 81, 0.4);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    letter-spacing: 0.5px;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(231, 111, 81, 0.5);
+}
+
+/* Sun decoration */
+.title-sun {
+    position: absolute;
+    top: 30px;
+    right: 60px;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, #FFD700 30%, #FFA500 70%, transparent 70%);
+    border-radius: 50%;
+    z-index: 1;
+    animation: glow 3s infinite alternate;
+}
+
+/* Cloud decorations */
+.title-cloud {
+    position: absolute;
+    background: white;
+    border-radius: 50px;
+    z-index: 1;
+    opacity: 0.7;
+}
+
+.title-cloud:nth-child(1) {
+    width: 120px; height: 40px; top: 50px; left: 10%;
+    animation: floatCloud 15s linear infinite;
+}
+
+.title-cloud:nth-child(2) {
+    width: 160px; height: 50px; top: 90px; left: 40%;
+    animation: floatCloud 20s linear infinite;
+    animation-delay: -5s;
+}
+
+.title-cloud:nth-child(3) {
+    width: 100px; height: 35px; top: 40px; left: 70%;
+    animation: floatCloud 18s linear infinite;
+    animation-delay: -10s;
+}
+
+/* Forest footer creatures */
+.title-creatures {
+    position: absolute;
+    bottom: 15%;
+    left: 0;
+    right: 0;
+    font-size: 2.5rem;
+    z-index: 1;
+    display: flex;
+    justify-content: space-around;
+    padding: 0 10%;
+    opacity: 0.8;
+}
+
+/* === Shared Layout === */
+.content-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    width: 100%;
+}
+
+.section-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--white);
+    text-align: center;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+    margin-bottom: 1.5rem;
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+}
+
+/* === Footer === */
+.game-credits {
+    text-align: center;
+    padding: 1rem;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.75rem;
+}
+
+/* === Confetti Container === */
+#confetti-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    overflow: hidden;
+}
