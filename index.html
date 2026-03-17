@@ -49,20 +49,12 @@
         <div class="content-wrapper">
             <h2 class="section-title">🐾 Elige a tus Bestias 🐾</h2>
 
-            <div class="player-slots">
-                <div id="player-slot-1" class="player-slot active-slot">
-                    <div class="slot-empty">
-                        <div class="slot-number">Jugador 1</div>
-                        <div class="slot-hint">Elige un personaje</div>
-                    </div>
-                </div>
-                <div id="player-slot-2" class="player-slot">
-                    <div class="slot-empty">
-                        <div class="slot-number">Jugador 2</div>
-                        <div class="slot-hint">Elige un personaje</div>
-                    </div>
-                </div>
+            <div class="player-controls-bar">
+                <button id="btn-remove-player" class="btn-player-control" disabled>➖</button>
+                <span id="player-count-label" class="player-count-label">2 jugadores</span>
+                <button id="btn-add-player" class="btn-player-control">➕</button>
             </div>
+            <div id="player-slots-container" class="player-slots"></div>
 
             <div id="character-grid" class="character-grid"></div>
 
