@@ -70,15 +70,14 @@ window.Carrera.adventure = (function() {
 
         sendStatusUpdate();
 
-        // Auto-send narrative, then choices AFTER narrative would finish typing
-        // Average narrative ~200 chars × 18ms = ~3.6s. Use 4s delay for choices.
+        // Auto-send narrative, then choices 5s after typing finishes
         setTimeout(function() {
             sendNarrativeToPlayer();
         }, 400);
 
         if (scene.opciones && scene.opciones.length > 0) {
             var narrativeLen = (scene.narrativa || '').length;
-            var typingTime = Math.max(3000, narrativeLen * 18 + 1000); // Wait for typing + 1s buffer
+            var typingTime = narrativeLen * 18 + 5000; // typing duration + 5s pause
             setTimeout(function() {
                 sendChoicesToPlayer(scene);
             }, typingTime);
@@ -250,9 +249,8 @@ window.Carrera.adventure = (function() {
                 preview += '</div>';
             }
 
-            // Action buttons
+            // Action buttons (no "send choices" — choices auto-send after narrative)
             var actions = '<div class="gm-option-actions">';
-            actions += '<button class="btn-gm-action btn-send-choices">📤 Enviar opciones</button>';
             actions += '<button class="btn-gm-action btn-resolve">▶ Resolver</button>';
             actions += '</div>';
 
@@ -272,11 +270,6 @@ window.Carrera.adventure = (function() {
                     }
                 });
             }
-
-            card.querySelector('.btn-send-choices').addEventListener('click', function() {
-                sendChoicesToPlayer(scene);
-                flashSendConfirmation(this);
-            });
 
             card.querySelector('.btn-resolve').addEventListener('click', function() {
                 gmResolveOption(opcion);

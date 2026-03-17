@@ -27,6 +27,18 @@ window.Carrera.scenes = {
                     complicacion: { texto: 'Buscan y buscan pero solo encuentran hojas y bellotas. Han perdido algo de tiempo, pero al menos saben que el camino correcto es hacia el río.', reloj: 1, flag: null },
                     juerga: { texto: '¡Una ardilla traviesa sale de los arbustos, agarra el mapa y sale corriendo! Las Bestias la persiguen entre risas hasta que la ardilla se lo devuelve... ¡junto con una bellota de regalo!', reloj: 1, flag: 'bellotaRegalo' }
                 }
+            },
+            {
+                id: '1c', texto: 'Trepar al roble para ver mejor', emoji: '🌳',
+                requiereTirada: true, dificultad: 9,
+                tagsRelevantes: ['Trepar a Toda Velocidad', 'Equilibrio Perfecto', 'Visión de Águila', 'Alas Silenciosas'],
+                siguienteEscena: 'scene2',
+                resultados: {
+                    critico: { texto: '¡Desde lo alto del roble se ve TODO el bosque! El río brilla a lo lejos, y... ¡hay un camino secreto entre los arbustos que lleva directo! Además encuentran un nido vacío con un huevo brillante de recuerdo.', reloj: 0, flag: 'pistaExtra' },
+                    exito: { texto: 'Suben a una rama alta y pueden ver el río a lo lejos. ¡Ahora saben exactamente qué camino tomar! Bajan contentos y emocionados.', reloj: 0, flag: null },
+                    complicacion: { texto: 'Las ramas son más frágiles de lo que parecen... ¡CRACK! Se rompe una ramita y las Bestias bajan resbalándose. No se hacen daño pero pierden un poco de tiempo.', reloj: 1, flag: null },
+                    juerga: { texto: '¡Suben al roble y se encuentran cara a cara con un búho dormido! "¡¿QUIÉN DESPIERTA A DON PLUMAS?!" grita el búho furioso. Las Bestias bajan a toda velocidad mientras el búho les tira bellotas. ¡Pero una bellota tiene un dibujo de una llave!', reloj: 1, flag: 'bellotaRegalo' }
+                }
             }
         ]
     },
@@ -63,6 +75,18 @@ window.Carrera.scenes = {
                     complicacion: { texto: 'El tronco es más pesado de lo que pensaban. Lo logran mover, pero les cuesta trabajo y pierden algo de tiempo.', reloj: 1, flag: null },
                     juerga: { texto: '¡El tronco rueda cuando están encima! Las Bestias hacen equilibrio como en un circo, moviendo las patitas a toda velocidad. ¡Parecen payasos del bosque! Pero logran cruzar entre carcajadas.', reloj: 1, flag: null }
                 }
+            },
+            {
+                id: '2c', texto: '¡Nadar directamente por el río!', emoji: '🏊',
+                requiereTirada: true, dificultad: 11,
+                tagsRelevantes: ['Nadar como Pez', 'Aguantar la Respiración', 'Pelaje Impermeable', 'Resistencia'],
+                siguienteEscena: 'scene3',
+                resultados: {
+                    critico: { texto: '¡Las Bestias nadan como torpedos! La corriente no puede con ellas. Llegan al otro lado en un instante, completamente secas gracias a sacudirse como perros. ¡Los peces aplauden con sus aletas!', reloj: 0, flag: null },
+                    exito: { texto: 'Con valentía se lanzan al agua. La corriente es fuerte pero las Bestias son más fuertes. Llegan al otro lado un poco cansadas pero orgullosas.', reloj: 0, flag: null },
+                    complicacion: { texto: '¡La corriente es MÁS fuerte de lo que pensaban! Las Bestias luchan contra el agua y terminan 50 metros río abajo. Pero al menos están al otro lado...', reloj: 1, flag: null },
+                    juerga: { texto: '¡Se lanzan heroicamente al río pero se olvidan de que el agua está HELADA! "¡¡¡AAAAAHHH!!!" gritan saltando como resortes. Dan tantos saltos que cruzan el río a puro brinco, ¡sin tocar el agua!', reloj: 1, flag: null }
+                }
             }
         ]
     },
@@ -98,6 +122,18 @@ window.Carrera.scenes = {
                     exito: { texto: '¡Funciona! La luz revela el camino entre las raíces. Las Bestias avanzan con confianza hasta encontrar la salida del túnel.', reloj: 0, flag: null },
                     complicacion: { texto: 'La luz parpadea y se apaga un momento. ¡Qué susto! Pero vuelve a encenderse justo a tiempo para ver el camino.', reloj: 1, flag: null },
                     juerga: { texto: '¡La luz atrae a CIENTOS de luciérnagas! El túnel se llena de puntitos brillantes que vuelan por todas partes. Las Bestias estornudan cuando las luciérnagas les hacen cosquillas en la nariz. ¡Achís! ¡Achís! Pero el túnel queda PRECIOSO.', reloj: 1, flag: null }
+                }
+            },
+            {
+                id: '3c', texto: 'Seguir los sonidos misteriosos', emoji: '👂',
+                requiereTirada: true, dificultad: 10,
+                tagsRelevantes: ['Orejas Giratorias', 'Olfato Rastreador', 'Sabiduría Antigua', 'Cola Esponjosa'],
+                siguienteEscena: 'scene4',
+                resultados: {
+                    critico: { texto: '¡Los susurros son en realidad el viento pasando por grietas! Las Bestias siguen el sonido y descubren un atajo secreto: un tobogán de raíces que las lleva directamente a una cueva iluminada por cristales. ¡Qué pasada!', reloj: 0, flag: 'mapasTunel' },
+                    exito: { texto: 'Con las orejas bien abiertas, las Bestias siguen los sonidos. El susurro las guía por un camino seguro entre las raíces hasta la salida del túnel.', reloj: 0, flag: null },
+                    complicacion: { texto: 'Los sonidos las confunden un poco... van a la izquierda, luego a la derecha, luego otra vez a la izquierda. Dan un par de vueltas de más pero al final encuentran la salida.', reloj: 1, flag: null },
+                    juerga: { texto: '¡Los susurros resultan ser una FAMILIA DE TOPOS cantando ópera! "¡LA-LA-LAAAA!" cantan a todo pulmón. Las Bestias se quedan boquiabiertas y los topos, avergonzados, les indican la salida. "¡Por ahí, por ahí, y no le cuenten a nadie!"', reloj: 1, flag: null }
                 }
             }
         ]
@@ -184,6 +220,19 @@ window.Carrera.scenes = {
                     exito: { texto: 'Buscan entre las piedras y las raíces... ¡AHÍ! Una llave vieja pero funcional. La meten en el candado... ¡CLICK! La caja se abre mostrando gemas brillantes de todos los colores.', reloj: 0, flag: null },
                     complicacion: { texto: 'Buscan y buscan... ¡No la encuentran! Pero no se rinden. Después de excavar un poco más... ¡ENCONTRADA! La llave estaba más profunda de lo esperado. La caja se abre: ¡las Gemas de los Titanes!', reloj: 1, flag: null },
                     juerga: { texto: '¡Encuentran la llave pero es GIGANTE! Es una llave de Titán (humano). Las dos Bestias tienen que cargarla juntas haciendo equilibrio. "¡A la izquierda!" "¡No, a la derecha!" ¡CLONK! La meten en el candado y... ¡¡la caja se abre lanzando confeti de hojas!! ¡GEMAS BRILLANTES POR TODAS PARTES!', reloj: 0, flag: null }
+                }
+            },
+            {
+                id: '5c', texto: '¡Hablarle al candado con magia!', emoji: '🪄',
+                requiereTirada: true, dificultad: 12,
+                tagsRelevantes: ['Sabiduría Antigua', 'Ser Astuto', 'Ver en la Oscuridad', 'Sigilo de las Sombras'],
+                ventajaConFlags: ['mapasTunel', 'ayudaTejon'],
+                siguienteEscena: 'victoria',
+                resultados: {
+                    critico: { texto: '¡Las Bestias recuerdan las palabras mágicas de los Titanes! "¡ABRACAPATA!" gritan juntas y... ¡¡FLAAASH!! El candado BRILLA, se transforma en una mariposa dorada y se va volando. La caja se abre sola revelando las Gemas de los Titanes en todo su esplendor.', reloj: 0, flag: null },
+                    exito: { texto: 'Con cuidado, las Bestias susurran las palabras antiguas que aprendieron en el camino. El candado hace "click" suavemente y se abre. ¡Dentro brillan las Gemas de los Titanes!', reloj: 0, flag: null },
+                    complicacion: { texto: 'Las Bestias intentan varias palabras mágicas: "¡Ábrete sésamo!" "¡Abracadabra!" "¡POR FAVOR!" Al final, la última palabra funciona (el candado se abre con educación). Las Gemas brillan dentro.', reloj: 1, flag: null },
+                    juerga: { texto: '¡Las Bestias inventan un HECHIZO CANTADO! "🎵 Candadito, candadón, ¡ábrete por favor! 🎵" ¡Y funciona! Pero el candado empieza a bailar antes de abrirse. ¡Hace breakdance sobre la caja! Cuando para, la caja se abre con una lluvia de gemas brillantes.', reloj: 0, flag: null }
                 }
             }
         ]

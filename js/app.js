@@ -92,6 +92,27 @@ window.Carrera.app = (function() {
             });
         }
 
+        // Show team on player screen
+        var btnShowTeam = document.getElementById('btn-show-team-player');
+        if (btnShowTeam) {
+            btnShowTeam.addEventListener('click', function() {
+                var team = window.Carrera.characters.getTeam();
+                var teamData = team.map(function(p) {
+                    return {
+                        emoji: p.emoji, nombre: p.nombre, especie: p.especie,
+                        habilidad: p.habilidad.nombre, herramienta: p.herramienta.nombre,
+                        talento: p.talento.nombre, rasgo: p.rasgo.nombre, color: p.color
+                    };
+                });
+                window.Carrera.sync.send('team_show', { team: teamData });
+                window.Carrera.adventure.addLog('📺 Equipo mostrado en pantalla');
+                // Flash
+                var orig = btnShowTeam.textContent;
+                btnShowTeam.textContent = '✅';
+                setTimeout(function() { btnShowTeam.textContent = orig; }, 1000);
+            });
+        }
+
         // Send narrative
         var btnSendNarrative = document.getElementById('btn-send-narrative');
         if (btnSendNarrative) {

@@ -529,6 +529,61 @@
         .bg-splash { animation: splashUp 3s ease-in-out infinite; }
         .bg-star { animation: starTwinkle 2s ease-in-out infinite; }
 
+        /* === Team Panel (sidebar) === */
+        .player-team-panel {
+            position: fixed;
+            right: 0;
+            top: 60px;
+            bottom: 0;
+            width: 260px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 50;
+            padding: 1rem;
+            overflow-y: auto;
+            animation: slideInRight 0.4s ease-out;
+            border-left: 1px solid rgba(255,255,255,0.1);
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .player-team-header {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--gold);
+            margin-bottom: 0.8rem;
+            text-align: center;
+        }
+
+        .player-team-member {
+            background: rgba(255,255,255,0.06);
+            border-radius: 8px;
+            padding: 0.6rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .ptm-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.3rem;
+        }
+
+        .ptm-tags {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .ptm-tag {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+        }
+
         /* === Waiting for GM === */
         .player-waiting-gm {
             text-align: center;

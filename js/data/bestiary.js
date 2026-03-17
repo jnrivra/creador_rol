@@ -15,7 +15,7 @@ window.Carrera.bestiary = [
         talento: { nombre: 'Moverse Como el Viento', descripcion: 'Puedes moverte sin que nadie te oiga' },
         rasgo: { nombre: 'Patas Silenciosas', descripcion: 'Tus patas no hacen ningún ruido al caminar' },
         descripcionCorta: '¡El más rápido del bosque!',
-        recomendadoPara: 'Niño de 4 años'
+        recomendadoPara: null
     },
     {
         id: 'pantera',
@@ -30,7 +30,7 @@ window.Carrera.bestiary = [
         talento: { nombre: 'Ver en la Oscuridad', descripcion: 'Puedes ver perfectamente aunque no haya luz' },
         rasgo: { nombre: 'Pelaje Oscuro como la Noche', descripcion: 'Tu pelaje negro te ayuda a esconderte' },
         descripcionCorta: '¡Maestra de las sombras y la noche!',
-        recomendadoPara: 'Niña de 7 años'
+        recomendadoPara: null
     },
     {
         id: 'zorro',

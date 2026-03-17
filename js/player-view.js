@@ -85,6 +85,8 @@ window.Carrera.playerView = (function() {
             case 'victory': handleVictory(data); break;
             case 'volume_change': handleVolumeChange(data); break;
             case 'ambient_change': handleAmbientChange(data); break;
+            case 'team_show': handleTeamShow(data); break;
+            case 'team_hide': handleTeamHide(); break;
         }
     }
 
@@ -283,6 +285,41 @@ window.Carrera.playerView = (function() {
         waitEl.className = 'player-waiting-gm';
         waitEl.innerHTML = '<span class="waiting-dots">La aventura continúa</span>';
         el.appendChild(waitEl);
+    }
+
+    // === Team Display (sidebar on player) ===
+    function handleTeamShow(data) {
+        // Remove existing
+        handleTeamHide();
+
+        var panel = document.createElement('div');
+        panel.id = 'player-team-panel';
+        panel.className = 'player-team-panel';
+
+        var html = '<div class="player-team-header">⚔️ Equipo</div>';
+        if (data.team) {
+            data.team.forEach(function(p) {
+                html += '<div class="player-team-member" style="border-left: 3px solid ' + (p.color || '#f4a261') + ';">';
+                html += '<div class="ptm-name">' + esc(p.emoji) + ' ' + esc(p.nombre) + '</div>';
+                html += '<div class="ptm-tags">';
+                html += '<span class="ptm-tag">⚡ ' + esc(p.habilidad) + '</span>';
+                html += '<span class="ptm-tag">🔧 ' + esc(p.herramienta) + '</span>';
+                html += '<span class="ptm-tag">✨ ' + esc(p.talento) + '</span>';
+                html += '<span class="ptm-tag">🐾 ' + esc(p.rasgo) + '</span>';
+                html += '</div></div>';
+            });
+        }
+
+        panel.innerHTML = html;
+        document.querySelector('.player-wrap').appendChild(panel);
+
+        // Auto-hide after 15 seconds
+        setTimeout(function() { handleTeamHide(); }, 15000);
+    }
+
+    function handleTeamHide() {
+        var existing = document.getElementById('player-team-panel');
+        if (existing) existing.remove();
     }
 
     // === Status ===
