@@ -58,10 +58,11 @@ window.Carrera.app = (function() {
             });
         }
 
-        // Handle player reconnection
+        // Handle player reconnection (only resend ONCE per connection)
+        var playerSynced = false;
         window.Carrera.sync.onMessage(function(msg) {
-            if (msg.type === 'player_ready' && window.Carrera.adventure.getState().currentSceneId) {
-                // Player just connected/reconnected — resend current state
+            if (msg.type === 'player_ready' && !playerSynced && window.Carrera.adventure.getState().currentSceneId) {
+                playerSynced = true;
                 setTimeout(function() {
                     window.Carrera.adventure.resendCurrentState();
                 }, 300);
