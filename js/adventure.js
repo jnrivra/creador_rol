@@ -292,20 +292,26 @@ window.Carrera.adventure = (function() {
             var skillAuto = window.Carrera.characters.checkSkillAutoSuccess(opcion.tagsRelevantes);
             var flagAuto = opcion.autoExitoFlags && opcion.autoExitoFlags.some(function(f) { return state.flags[f]; });
 
+            var diff = (opcion.dificultad || 10) + window.Carrera.dice.getDifficultyBonus();
+            var diffLabel = window.Carrera.dice.getDifficultyLabel(diff);
+
             if (hasAutoSuccess || skillAuto || flagAuto) {
                 info += '<span style="color:#4ade80;font-weight:700;">⚡ Auto-éxito</span> ';
             } else if (hasAdv) {
                 info += '<span style="color:#fbbf24;font-weight:700;">🎲🎲 Ventaja</span> ';
             } else {
-                info += '🎲 Requiere tirada ';
+                info += '🎲 ';
             }
+
+            info += '<span style="color:rgba(255,255,255,0.5);">Dif: ' + diff + ' (' + diffLabel + ')</span> ';
+            info += '<span style="font-size:0.65rem;color:rgba(255,255,255,0.35);">≥' + (diff+5) + '⭐ ≥' + diff + '✅ ≥' + (diff-4) + '⚠️ <' + (diff-4) + '🎪</span>';
 
             if (opcion.tagsRelevantes && opcion.tagsRelevantes.length > 0) {
                 var matchingTags = opcion.tagsRelevantes.filter(function(t) {
                     return window.Carrera.characters.hasTag(t);
                 });
                 if (matchingTags.length > 0) {
-                    info += '| <span style="color:#4ade80;">' + matchingTags.join(', ') + '</span>';
+                    info += '<br><span style="color:#4ade80;font-size:0.7rem;">✓ ' + matchingTags.join(', ') + '</span>';
                 }
             }
         } else {
@@ -508,18 +514,34 @@ window.Carrera.adventure = (function() {
 
     // --- Dice ---
 
-    function gmRollDice() {
+    // GM inputs the number the kids rolled on their physical dice
+    function gmResolveRoll() {
         var opcion = state.currentOption;
         if (!opcion) {
             addLog('⚠️ Selecciona una opción primero (▶ Resolver)');
             return;
         }
 
+        var input = document.getElementById('gm-roll-input');
+        if (!input || !input.value) {
+            addLog('⚠️ Ingresa el número que sacaron los niños');
+            input && input.focus();
+            return;
+        }
+
+        var rollValue = parseInt(input.value, 10);
+        if (isNaN(rollValue) || rollValue < 1 || rollValue > 20) {
+            addLog('⚠️ El número debe ser entre 1 y 20');
+            return;
+        }
+
         var advCheck = document.getElementById('gm-advantage-check');
         var hasAdvantage = advCheck ? advCheck.checked : false;
+        var baseDiff = opcion.dificultad || 10;
 
-        var rollResult = window.Carrera.dice.roll(hasAdvantage);
+        var rollResult = window.Carrera.dice.resolve(rollValue, baseDiff, hasAdvantage);
 
+        // Send to player
         window.Carrera.sync.send('dice_roll', { rollResult: rollResult });
         window.Carrera.audio.playDiceRoll();
 
@@ -527,8 +549,8 @@ window.Carrera.adventure = (function() {
 
         var label = window.Carrera.dice.getResultLabel(rollResult.tipo);
         state.diceHistory.unshift({
-            die: rollResult.dado,
-            result: rollResult.resultadoFinal,
+            value: rollResult.valor,
+            difficulty: rollResult.dificultad,
             type: rollResult.tipo,
             advantage: hasAdvantage,
             label: label.texto
@@ -536,7 +558,10 @@ window.Carrera.adventure = (function() {
         renderDiceHistory();
         showLastRollDisplay(rollResult);
 
-        addLog('🎲 d' + rollResult.dado + ' → ' + rollResult.resultadoFinal + ' (' + label.texto + ')' + (hasAdvantage ? ' ventaja' : ''));
+        addLog('🎲 ' + rollResult.valor + ' vs dif.' + rollResult.dificultad + ' → ' + label.texto + (hasAdvantage ? ' (ventaja)' : ''));
+
+        // Clear input
+        input.value = '';
 
         // Result sound on GM
         setTimeout(function() {
@@ -546,11 +571,9 @@ window.Carrera.adventure = (function() {
             else window.Carrera.audio.playFailure();
         }, 1200);
 
-        if (opcion) {
-            setTimeout(function() {
-                resolveRollResult(opcion, rollResult);
-            }, 2000);
-        }
+        setTimeout(function() {
+            resolveRollResult(opcion, rollResult);
+        }, 2000);
     }
 
     function showLastRollDisplay(rollResult) {
@@ -563,11 +586,11 @@ window.Carrera.adventure = (function() {
         container.innerHTML =
             '<div class="gm-last-roll-display" style="border-color: ' + (colors[rollResult.tipo] || '#fff') + ';">' +
             '<div class="gm-last-roll-value" style="color: ' + (colors[rollResult.tipo] || '#fff') + ';">' +
-            rollResult.resultadoFinal +
+            rollResult.valor +
             '</div>' +
             '<div class="gm-last-roll-info">' +
             '<span class="gm-last-roll-type">' + label.emoji + ' ' + label.texto + '</span>' +
-            '<span class="gm-last-roll-die">d' + rollResult.dado + (rollResult.ventaja ? ' 🎲🎲' : '') + '</span>' +
+            '<span class="gm-last-roll-die">vs dificultad ' + rollResult.dificultad + (rollResult.ventaja ? ' 🎲🎲' : '') + '</span>' +
             '</div>' +
             '</div>';
 
@@ -618,11 +641,11 @@ window.Carrera.adventure = (function() {
             sendStatusUpdate();
             updateGMStatus();
 
-            if (clockResult.dieShrunk) {
-                var newDie = window.Carrera.dice.getCurrentDie();
+            if (clockResult.difficultyUp) {
+                var bonus = window.Carrera.dice.getDifficultyBonus();
                 window.Carrera.sync.send('outcome_show', {
                     text: resultado.texto,
-                    clockWarning: '⏰ ¡El reloj se llenó! El dado baja a d' + newDie
+                    clockWarning: '⏰ ¡El reloj se llenó! Dificultad +' + bonus
                 });
             }
         }
@@ -635,12 +658,13 @@ window.Carrera.adventure = (function() {
         state.currentOption = null;
     }
 
-    function resolveRollResult(opcion, rollResult) {
-        var resultado = opcion.resultados[rollResult.tipo];
+    function resolveRollResult(opcion, rollData) {
+        var tipo = rollData.tipo;
+        var resultado = opcion.resultados[tipo];
         if (!resultado) resultado = opcion.resultados.complicacion;
 
         var effectMap = { critico: 'critical', exito: 'success', complicacion: 'failure', juerga: 'hijinx' };
-        window.Carrera.sync.send('effect_play', { effect: effectMap[rollResult.tipo] || 'success' });
+        window.Carrera.sync.send('effect_play', { effect: effectMap[tipo] || 'success' });
 
         var outcomeData = { text: resultado.texto };
 
@@ -649,9 +673,9 @@ window.Carrera.adventure = (function() {
             sendStatusUpdate();
             updateGMStatus();
 
-            if (clockResult.dieShrunk) {
-                var newDie = window.Carrera.dice.getCurrentDie();
-                outcomeData.clockWarning = '⏰ ¡El reloj se llenó! El dado baja a d' + newDie;
+            if (clockResult.difficultyUp) {
+                var bonus = window.Carrera.dice.getDifficultyBonus();
+                outcomeData.clockWarning = '⏰ ¡El reloj se llenó! Dificultad +' + bonus;
             }
 
             window.Carrera.sync.send('effect_play', { effect: 'clock_tick' });
@@ -661,7 +685,7 @@ window.Carrera.adventure = (function() {
 
         if (resultado.flag) state.flags[resultado.flag] = true;
 
-        showGMOutcome(resultado.texto, opcion.siguienteEscena, rollResult.tipo);
+        showGMOutcome(resultado.texto, opcion.siguienteEscena, tipo);
         state.currentOption = null;
     }
 
@@ -763,11 +787,11 @@ window.Carrera.adventure = (function() {
     // --- GM Status ---
 
     function updateGMStatus() {
-        var die = window.Carrera.dice.getCurrentDie();
+        var bonus = window.Carrera.dice.getDifficultyBonus();
         var clockState = window.Carrera.clock.getState();
 
         var dieEl = document.getElementById('gm-current-die');
-        if (dieEl) dieEl.textContent = 'd' + die;
+        if (dieEl) dieEl.textContent = '+' + bonus;
 
         var statusClock = document.getElementById('gm-status-clock');
         if (statusClock) {
@@ -794,7 +818,7 @@ window.Carrera.adventure = (function() {
 
         container.innerHTML = state.diceHistory.slice(0, 15).map(function(entry) {
             var c = colors[entry.type] || '#fff';
-            return '<div class="gm-dice-history-entry" style="color:' + c + ';">d' + entry.die + ' → ' + entry.result + ' ' + entry.label + (entry.advantage ? ' 🎲🎲' : '') + '</div>';
+            return '<div class="gm-dice-history-entry" style="color:' + c + ';">' + (entry.value || entry.result || '?') + ' vs ' + (entry.difficulty || '?') + ' → ' + entry.label + (entry.advantage ? ' 🎲🎲' : '') + '</div>';
         }).join('');
     }
 
@@ -856,7 +880,7 @@ window.Carrera.adventure = (function() {
         getState: getState,
         sendNarrativeToPlayer: sendNarrativeToPlayer,
         sendChoicesToPlayer: sendChoicesToPlayer,
-        gmRollDice: gmRollDice,
+        gmResolveRoll: gmResolveRoll,
         gmManualResolve: gmManualResolve,
         updateGMStatus: updateGMStatus,
         sendStatusUpdate: sendStatusUpdate,

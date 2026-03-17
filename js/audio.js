@@ -1,4 +1,4 @@
-// Motor de Audio Procedural - Web Audio API
+// Motor de Audio Procedural - Zelda-inspired SFX + Ambient
 window.Carrera = window.Carrera || {};
 
 window.Carrera.audio = (function() {
@@ -36,43 +36,54 @@ window.Carrera.audio = (function() {
         if (ctx && ctx.state === 'suspended') ctx.resume();
     }
 
-    // --- Noise Generators ---
+    // === Helpers ===
+
     function createNoiseBuffer(type, duration) {
         if (!ctx) return null;
-        var sampleRate = ctx.sampleRate;
-        var length = sampleRate * (duration || 2);
-        var buffer = ctx.createBuffer(1, length, sampleRate);
-        var data = buffer.getChannelData(0);
-        var lastOut = 0;
-
-        for (var i = 0; i < length; i++) {
-            var white = Math.random() * 2 - 1;
-            if (type === 'brown') {
-                lastOut = (lastOut + (0.02 * white)) / 1.02;
-                data[i] = lastOut * 3.5;
-            } else {
-                data[i] = white;
-            }
+        var sr = ctx.sampleRate;
+        var len = sr * (duration || 2);
+        var buf = ctx.createBuffer(1, len, sr);
+        var d = buf.getChannelData(0);
+        var last = 0;
+        for (var i = 0; i < len; i++) {
+            var w = Math.random() * 2 - 1;
+            if (type === 'brown') { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; }
+            else { d[i] = w; }
         }
-        return buffer;
+        return buf;
     }
 
     function createNoiseSource(type, duration) {
-        var buffer = createNoiseBuffer(type, duration);
-        if (!buffer) return null;
-        var source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
-        return source;
+        var buf = createNoiseBuffer(type, duration);
+        if (!buf) return null;
+        var s = ctx.createBufferSource();
+        s.buffer = buf;
+        s.loop = true;
+        return s;
     }
 
-    // --- Ambient Presets ---
+    // Play a note with triangle wave (retro/Zelda feel)
+    function playNote(freq, startTime, duration, vol, waveType) {
+        if (!ctx) return;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = waveType || 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(vol || 0.15, startTime + 0.015);
+        gain.gain.linearRampToValueAtTime(vol * 0.6, startTime + duration * 0.5);
+        gain.gain.linearRampToValueAtTime(0, startTime + duration);
+        osc.connect(gain);
+        gain.connect(sfxGain);
+        osc.start(startTime);
+        osc.stop(startTime + duration + 0.01);
+    }
+
+    // === AMBIENT PRESETS ===
+
     function stopAmbient() {
-        currentAmbientNodes.forEach(function(node) {
-            try {
-                if (node.stop) node.stop();
-                if (node.disconnect) node.disconnect();
-            } catch (e) {}
+        currentAmbientNodes.forEach(function(n) {
+            try { if (n.stop) n.stop(); if (n.disconnect) n.disconnect(); } catch(e) {}
         });
         currentAmbientNodes = [];
     }
@@ -80,391 +91,115 @@ window.Carrera.audio = (function() {
     function playAmbient(preset) {
         if (!ctx) return;
         stopAmbient();
-
-        var presets = {
-            forest: createForestAmbient,
-            river: createRiverAmbient,
-            tunnel: createTunnelAmbient,
-            den: createDenAmbient,
-            treasure: createTreasureAmbient,
-            victory: createVictoryAmbient
-        };
-
-        if (presets[preset]) presets[preset]();
+        var fn = {
+            forest: createForestAmbient, river: createRiverAmbient,
+            tunnel: createTunnelAmbient, den: createDenAmbient,
+            treasure: createTreasureAmbient, victory: createVictoryAmbient
+        }[preset];
+        if (fn) fn();
     }
 
     function createForestAmbient() {
-        // Wind - brown noise through bandpass
+        // Wind
         var wind = createNoiseSource('brown', 3);
-        var windFilter = ctx.createBiquadFilter();
-        windFilter.type = 'bandpass';
-        windFilter.frequency.value = 300;
-        windFilter.Q.value = 0.5;
-        var windGain = ctx.createGain();
-        windGain.gain.value = 0.35;
-        wind.connect(windFilter);
-        windFilter.connect(windGain);
-        windGain.connect(ambientGain);
-        wind.start();
-        currentAmbientNodes.push(wind, windFilter, windGain);
+        var wf = ctx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 300; wf.Q.value = 0.5;
+        var wg = ctx.createGain(); wg.gain.value = 0.3;
+        wind.connect(wf); wf.connect(wg); wg.connect(ambientGain); wind.start();
+        currentAmbientNodes.push(wind, wf, wg);
 
-        // High wind layer for leaves
-        var highWind = createNoiseSource('white', 3);
-        var highFilter = ctx.createBiquadFilter();
-        highFilter.type = 'bandpass';
-        highFilter.frequency.value = 2000;
-        highFilter.Q.value = 1.5;
-        var highGain = ctx.createGain();
-        highGain.gain.value = 0.03;
-        var highLfo = ctx.createOscillator();
-        highLfo.frequency.value = 0.15;
-        var highLfoG = ctx.createGain();
-        highLfoG.gain.value = 0.02;
-        highLfo.connect(highLfoG);
-        highLfoG.connect(highGain.gain);
-        highWind.connect(highFilter);
-        highFilter.connect(highGain);
-        highGain.connect(ambientGain);
-        highWind.start();
-        highLfo.start();
-        currentAmbientNodes.push(highWind, highFilter, highGain, highLfo, highLfoG);
+        // Leaves rustling
+        var leaves = createNoiseSource('white', 3);
+        var lf = ctx.createBiquadFilter(); lf.type = 'bandpass'; lf.frequency.value = 2200; lf.Q.value = 2;
+        var lg = ctx.createGain(); lg.gain.value = 0.025;
+        var llfo = ctx.createOscillator(); llfo.frequency.value = 0.12;
+        var llg = ctx.createGain(); llg.gain.value = 0.02;
+        llfo.connect(llg); llg.connect(lg.gain);
+        leaves.connect(lf); lf.connect(lg); lg.connect(ambientGain);
+        leaves.start(); llfo.start();
+        currentAmbientNodes.push(leaves, lf, lg, llfo, llg);
 
-        // Birds
         scheduleBirdChirp(1500, 3500);
-
-        // Crickets / insects
-        scheduleRandomSound(playInsect, 2000, 5000);
-    }
-
-    function playInsect() {
-        if (!ctx) return;
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sine';
-        var freq = 4000 + Math.random() * 2000;
-        osc.frequency.value = freq;
-        var dur = 0.08 + Math.random() * 0.15;
-        var numBursts = 2 + Math.floor(Math.random() * 4);
-
-        gain.gain.setValueAtTime(0, now);
-        for (var i = 0; i < numBursts; i++) {
-            var t = now + i * dur * 1.5;
-            gain.gain.linearRampToValueAtTime(0.02 + Math.random() * 0.015, t + 0.01);
-            gain.gain.linearRampToValueAtTime(0, t + dur);
-        }
-
-        osc.connect(gain);
-        gain.connect(ambientGain);
-        osc.start(now);
-        osc.stop(now + numBursts * dur * 1.5 + 0.1);
-    }
-
-    function scheduleBirdChirp(minDelay, maxDelay) {
-        var active = true;
-        var timeoutId = null;
-
-        function chirpLoop() {
-            if (!active || !ctx || currentAmbientNodes.length === 0) return;
-            playChirp();
-            var delay = minDelay + Math.random() * (maxDelay - minDelay);
-            timeoutId = setTimeout(chirpLoop, delay);
-        }
-
-        // Start first chirp soon
-        timeoutId = setTimeout(chirpLoop, 300 + Math.random() * 1000);
-
-        // Store cleanup
-        currentAmbientNodes.push({
-            stop: function() { active = false; clearTimeout(timeoutId); },
-            disconnect: function() {}
-        });
-    }
-
-    function playChirp() {
-        if (!ctx) return;
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        var baseFreq = 1800 + Math.random() * 1500;
-        var numNotes = 2 + Math.floor(Math.random() * 3);
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(baseFreq, now);
-
-        // Create a more natural multi-note chirp
-        var t = now;
-        for (var i = 0; i < numNotes; i++) {
-            var nextFreq = baseFreq * (0.8 + Math.random() * 0.5);
-            osc.frequency.exponentialRampToValueAtTime(nextFreq, t + 0.04);
-            t += 0.04;
-        }
-
-        var totalDur = numNotes * 0.04 + 0.05;
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.06 + Math.random() * 0.04, now + 0.015);
-        gain.gain.linearRampToValueAtTime(0.04, now + totalDur * 0.6);
-        gain.gain.linearRampToValueAtTime(0, now + totalDur);
-
-        osc.connect(gain);
-        gain.connect(ambientGain);
-        osc.start(now);
-        osc.stop(now + totalDur + 0.01);
+        scheduleRandomSound(playInsect, 2500, 5000);
     }
 
     function createRiverAmbient() {
-        // Water surface - white noise through lowpass with LFO
-        var water = createNoiseSource('white', 3);
-        var waterFilter = ctx.createBiquadFilter();
-        waterFilter.type = 'lowpass';
-        waterFilter.frequency.value = 800;
+        // Surface water
+        var w = createNoiseSource('white', 3);
+        var wf = ctx.createBiquadFilter(); wf.type = 'lowpass'; wf.frequency.value = 900;
+        var lfo = ctx.createOscillator(); lfo.frequency.value = 0.25;
+        var lfg = ctx.createGain(); lfg.gain.value = 350;
+        lfo.connect(lfg); lfg.connect(wf.frequency); lfo.start();
+        var wg = ctx.createGain(); wg.gain.value = 0.4;
+        w.connect(wf); wf.connect(wg); wg.connect(ambientGain); w.start();
+        currentAmbientNodes.push(w, wf, lfo, lfg, wg);
 
-        var lfo = ctx.createOscillator();
-        var lfoGain = ctx.createGain();
-        lfo.type = 'sine';
-        lfo.frequency.value = 0.3;
-        lfoGain.gain.value = 300;
-        lfo.connect(lfoGain);
-        lfoGain.connect(waterFilter.frequency);
-        lfo.start();
+        // Deep current
+        var d = createNoiseSource('brown', 3);
+        var df = ctx.createBiquadFilter(); df.type = 'lowpass'; df.frequency.value = 180;
+        var dg = ctx.createGain(); dg.gain.value = 0.2;
+        d.connect(df); df.connect(dg); dg.connect(ambientGain); d.start();
+        currentAmbientNodes.push(d, df, dg);
 
-        var waterGain = ctx.createGain();
-        waterGain.gain.value = 0.45;
-        water.connect(waterFilter);
-        waterFilter.connect(waterGain);
-        waterGain.connect(ambientGain);
-        water.start();
+        // Babbling
+        var b = createNoiseSource('white', 2);
+        var bf = ctx.createBiquadFilter(); bf.type = 'bandpass'; bf.frequency.value = 3200; bf.Q.value = 3;
+        var bg = ctx.createGain(); bg.gain.value = 0.035;
+        b.connect(bf); bf.connect(bg); bg.connect(ambientGain); b.start();
+        currentAmbientNodes.push(b, bf, bg);
 
-        currentAmbientNodes.push(water, waterFilter, lfo, lfoGain, waterGain);
-
-        // Deep current - brown noise for body of water
-        var deep = createNoiseSource('brown', 3);
-        var deepFilter = ctx.createBiquadFilter();
-        deepFilter.type = 'lowpass';
-        deepFilter.frequency.value = 200;
-        var deepGain = ctx.createGain();
-        deepGain.gain.value = 0.25;
-        deep.connect(deepFilter);
-        deepFilter.connect(deepGain);
-        deepGain.connect(ambientGain);
-        deep.start();
-        currentAmbientNodes.push(deep, deepFilter, deepGain);
-
-        // Babbling - high-freq noise bursts
-        var babble = createNoiseSource('white', 2);
-        var babbleFilter = ctx.createBiquadFilter();
-        babbleFilter.type = 'bandpass';
-        babbleFilter.frequency.value = 3000;
-        babbleFilter.Q.value = 3;
-        var babbleGain = ctx.createGain();
-        babbleGain.gain.value = 0.04;
-        var babbleLfo = ctx.createOscillator();
-        babbleLfo.frequency.value = 1.2;
-        var babbleLfoG = ctx.createGain();
-        babbleLfoG.gain.value = 0.03;
-        babbleLfo.connect(babbleLfoG);
-        babbleLfoG.connect(babbleGain.gain);
-        babble.connect(babbleFilter);
-        babbleFilter.connect(babbleGain);
-        babbleGain.connect(ambientGain);
-        babble.start();
-        babbleLfo.start();
-        currentAmbientNodes.push(babble, babbleFilter, babbleGain, babbleLfo, babbleLfoG);
-
-        // Splashes
         scheduleRandomSound(playSplash, 2500, 5000);
-
-        // Soft birds
-        scheduleBirdChirp(4000, 8000);
-    }
-
-    function playSplash() {
-        if (!ctx) return;
-        var now = ctx.currentTime;
-        var noise = createNoiseSource('white', 0.5);
-        if (!noise) return;
-        var filter = ctx.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.value = 1500 + Math.random() * 1000;
-        filter.Q.value = 2;
-        var gain = ctx.createGain();
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.06, now + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        noise.connect(filter);
-        filter.connect(gain);
-        gain.connect(ambientGain);
-        noise.start(now);
-        noise.stop(now + 0.35);
+        scheduleBirdChirp(5000, 9000);
     }
 
     function createTunnelAmbient() {
-        // Low wind
         var wind = createNoiseSource('brown', 3);
-        var windFilter = ctx.createBiquadFilter();
-        windFilter.type = 'lowpass';
-        windFilter.frequency.value = 200;
-        var windGain = ctx.createGain();
-        windGain.gain.value = 0.3;
-        wind.connect(windFilter);
-        windFilter.connect(windGain);
-        windGain.connect(ambientGain);
-        wind.start();
-        currentAmbientNodes.push(wind, windFilter, windGain);
+        var wf = ctx.createBiquadFilter(); wf.type = 'lowpass'; wf.frequency.value = 180;
+        var wg = ctx.createGain(); wg.gain.value = 0.25;
+        wind.connect(wf); wf.connect(wg); wg.connect(ambientGain); wind.start();
+        currentAmbientNodes.push(wind, wf, wg);
 
-        // Dripping with delay (echo effect)
-        scheduleRandomSound(playDrip, 1500, 4000);
+        scheduleRandomSound(playDrip, 1500, 3500);
 
-        // Subtle eerie tone
-        var eerieOsc = ctx.createOscillator();
-        eerieOsc.type = 'sine';
-        eerieOsc.frequency.value = 120;
-        var eerieGain = ctx.createGain();
-        eerieGain.gain.value = 0.03;
-        var eereLfo = ctx.createOscillator();
-        eereLfo.type = 'sine';
-        eereLfo.frequency.value = 0.1;
-        var eereLfoGain = ctx.createGain();
-        eereLfoGain.gain.value = 0.02;
-        eereLfo.connect(eereLfoGain);
-        eereLfoGain.connect(eerieGain.gain);
-        eerieOsc.connect(eerieGain);
-        eerieGain.connect(ambientGain);
-        eerieOsc.start();
-        eereLfo.start();
-        currentAmbientNodes.push(eerieOsc, eerieGain, eereLfo, eereLfoGain);
-    }
-
-    function playDrip() {
-        if (!ctx) return;
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-
-        osc.type = 'sine';
-        var startFreq = 2000 + Math.random() * 1000;
-        osc.frequency.setValueAtTime(startFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(startFreq * 0.3, now + 0.12);
-
-        gain.gain.setValueAtTime(0.08 + Math.random() * 0.04, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-
-        osc.connect(gain);
-        gain.connect(ambientGain);
-        osc.start(now);
-        osc.stop(now + 0.2);
+        // Eerie tone
+        var eo = ctx.createOscillator(); eo.type = 'sine'; eo.frequency.value = 110;
+        var eg = ctx.createGain(); eg.gain.value = 0.025;
+        var el = ctx.createOscillator(); el.frequency.value = 0.08;
+        var elg = ctx.createGain(); elg.gain.value = 0.015;
+        el.connect(elg); elg.connect(eg.gain);
+        eo.connect(eg); eg.connect(ambientGain); eo.start(); el.start();
+        currentAmbientNodes.push(eo, eg, el, elg);
     }
 
     function createDenAmbient() {
-        // Low rumble
-        var osc = ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.value = 40;
-        var filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 80;
-        var gain = ctx.createGain();
-        gain.gain.value = 0.15;
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(ambientGain);
-        osc.start();
-        currentAmbientNodes.push(osc, filter, gain);
-
-        // Occasional grumble sounds
+        var o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 40;
+        var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 80;
+        var g = ctx.createGain(); g.gain.value = 0.12;
+        o.connect(f); f.connect(g); g.connect(ambientGain); o.start();
+        currentAmbientNodes.push(o, f, g);
         scheduleRandomSound(playGrumble, 4000, 8000);
-
-        // Rare drips
-        scheduleRandomSound(playDrip, 5000, 10000);
-    }
-
-    function playGrumble() {
-        if (!ctx) return;
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        osc.type = 'sawtooth';
-        var gain = ctx.createGain();
-        var filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 150;
-
-        osc.frequency.setValueAtTime(60, now);
-        osc.frequency.linearRampToValueAtTime(80, now + 0.1);
-        osc.frequency.linearRampToValueAtTime(50, now + 0.3);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.06, now + 0.05);
-        gain.gain.linearRampToValueAtTime(0.03, now + 0.2);
-        gain.gain.linearRampToValueAtTime(0, now + 0.4);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(ambientGain);
-        osc.start(now);
-        osc.stop(now + 0.45);
+        scheduleRandomSound(playDrip, 6000, 12000);
     }
 
     function createTreasureAmbient() {
         // Shimmer chord
-        var freqs = [880, 1108.73, 1318.5]; // A5, C#6, E6
-        freqs.forEach(function(freq) {
-            var osc = ctx.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            var shimmerGain = ctx.createGain();
-            shimmerGain.gain.value = 0.04;
-            osc.connect(shimmerGain);
-            shimmerGain.connect(ambientGain);
-            osc.start();
-            currentAmbientNodes.push(osc, shimmerGain);
+        [880, 1108.73, 1318.5].forEach(function(freq) {
+            var o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = freq;
+            var g = ctx.createGain(); g.gain.value = 0.035;
+            o.connect(g); g.connect(ambientGain); o.start();
+            currentAmbientNodes.push(o, g);
         });
+        var trem = ctx.createOscillator(); trem.frequency.value = 2.5;
+        var tg = ctx.createGain(); tg.gain.value = 0.12;
+        trem.connect(tg); tg.connect(ambientGain.gain); trem.start();
+        currentAmbientNodes.push(trem, tg);
 
-        // Tremolo LFO on the ambient gain
-        var tremolo = ctx.createOscillator();
-        var tremoloGain = ctx.createGain();
-        tremolo.type = 'sine';
-        tremolo.frequency.value = 3;
-        tremoloGain.gain.value = 0.15;
-        tremolo.connect(tremoloGain);
-        tremoloGain.connect(ambientGain.gain);
-        tremolo.start();
-        currentAmbientNodes.push(tremolo, tremoloGain);
-
-        // Gentle wind
         var wind = createNoiseSource('brown', 3);
-        var windFilter = ctx.createBiquadFilter();
-        windFilter.type = 'bandpass';
-        windFilter.frequency.value = 400;
-        var windGain = ctx.createGain();
-        windGain.gain.value = 0.12;
-        wind.connect(windFilter);
-        windFilter.connect(windGain);
-        windGain.connect(ambientGain);
-        wind.start();
-        currentAmbientNodes.push(wind, windFilter, windGain);
+        var wf = ctx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 400;
+        var wg = ctx.createGain(); wg.gain.value = 0.1;
+        wind.connect(wf); wf.connect(wg); wg.connect(ambientGain); wind.start();
+        currentAmbientNodes.push(wind, wf, wg);
 
-        // Sparkle sounds
-        scheduleRandomSound(playSparkle, 800, 2500);
-    }
-
-    function playSparkle() {
-        if (!ctx) return;
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sine';
-        var freq = 2000 + Math.random() * 3000;
-        osc.frequency.setValueAtTime(freq, now);
-        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + 0.05);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.04 + Math.random() * 0.03, now + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-
-        osc.connect(gain);
-        gain.connect(ambientGain);
-        osc.start(now);
-        osc.stop(now + 0.18);
+        scheduleRandomSound(playSparkle, 600, 2000);
     }
 
     function createVictoryAmbient() {
@@ -472,356 +207,294 @@ window.Carrera.audio = (function() {
         scheduleBirdChirp(2000, 5000);
     }
 
-    // Helper: schedule random recurring sounds
-    function scheduleRandomSound(soundFn, minDelay, maxDelay) {
-        var active = true;
-        var timeoutId = null;
+    // === Ambient sound helpers ===
 
-        function loop() {
-            if (!active || !ctx || currentAmbientNodes.length === 0) return;
-            soundFn();
-            var delay = minDelay + Math.random() * (maxDelay - minDelay);
-            timeoutId = setTimeout(loop, delay);
-        }
-
-        timeoutId = setTimeout(loop, minDelay * 0.5 + Math.random() * minDelay);
-
-        currentAmbientNodes.push({
-            stop: function() { active = false; clearTimeout(timeoutId); },
-            disconnect: function() {}
-        });
+    function scheduleBirdChirp(min, max) {
+        var active = true; var tid;
+        function loop() { if (!active || !ctx || !currentAmbientNodes.length) return; playChirp(); tid = setTimeout(loop, min + Math.random() * (max - min)); }
+        tid = setTimeout(loop, 300 + Math.random() * 1000);
+        currentAmbientNodes.push({ stop: function() { active = false; clearTimeout(tid); }, disconnect: function() {} });
     }
 
-    // --- Sound Effects ---
+    function scheduleRandomSound(fn, min, max) {
+        var active = true; var tid;
+        function loop() { if (!active || !ctx || !currentAmbientNodes.length) return; fn(); tid = setTimeout(loop, min + Math.random() * (max - min)); }
+        tid = setTimeout(loop, min * 0.5 + Math.random() * min);
+        currentAmbientNodes.push({ stop: function() { active = false; clearTimeout(tid); }, disconnect: function() {} });
+    }
+
+    function playChirp() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var base = 1800 + Math.random() * 1500;
+        var n = 2 + Math.floor(Math.random() * 3);
+        var osc = ctx.createOscillator(); var g = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(base, now);
+        var t = now;
+        for (var i = 0; i < n; i++) { osc.frequency.exponentialRampToValueAtTime(base * (0.8 + Math.random() * 0.5), t + 0.04); t += 0.04; }
+        var dur = n * 0.04 + 0.05;
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.05 + Math.random() * 0.03, now + 0.015);
+        g.gain.linearRampToValueAtTime(0, now + dur);
+        osc.connect(g); g.connect(ambientGain); osc.start(now); osc.stop(now + dur + 0.01);
+    }
+
+    function playInsect() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator(); var g = ctx.createGain();
+        osc.type = 'sine'; var freq = 4000 + Math.random() * 2000; osc.frequency.value = freq;
+        var dur = 0.06 + Math.random() * 0.1;
+        var bursts = 2 + Math.floor(Math.random() * 4);
+        g.gain.setValueAtTime(0, now);
+        for (var i = 0; i < bursts; i++) {
+            var t = now + i * dur * 1.5;
+            g.gain.linearRampToValueAtTime(0.015, t + 0.01);
+            g.gain.linearRampToValueAtTime(0, t + dur);
+        }
+        osc.connect(g); g.connect(ambientGain); osc.start(now); osc.stop(now + bursts * dur * 1.5 + 0.1);
+    }
+
+    function playSplash() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var n = createNoiseSource('white', 0.5); if (!n) return;
+        var f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500 + Math.random() * 1000; f.Q.value = 2;
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.06, now + 0.02); g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        n.connect(f); f.connect(g); g.connect(ambientGain); n.start(now); n.stop(now + 0.35);
+    }
+
+    function playDrip() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator(); var g = ctx.createGain();
+        osc.type = 'sine'; var sf = 2000 + Math.random() * 1000;
+        osc.frequency.setValueAtTime(sf, now); osc.frequency.exponentialRampToValueAtTime(sf * 0.3, now + 0.12);
+        g.gain.setValueAtTime(0.07, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.connect(g); g.connect(ambientGain); osc.start(now); osc.stop(now + 0.2);
+    }
+
+    function playGrumble() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var o = ctx.createOscillator(); o.type = 'sawtooth';
+        var g = ctx.createGain(); var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 150;
+        o.frequency.setValueAtTime(60, now); o.frequency.linearRampToValueAtTime(80, now + 0.1); o.frequency.linearRampToValueAtTime(50, now + 0.3);
+        g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.05, now + 0.05); g.gain.linearRampToValueAtTime(0, now + 0.4);
+        o.connect(f); f.connect(g); g.connect(ambientGain); o.start(now); o.stop(now + 0.45);
+    }
+
+    function playSparkle() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var o = ctx.createOscillator(); var g = ctx.createGain();
+        o.type = 'sine'; var freq = 2000 + Math.random() * 3000;
+        o.frequency.setValueAtTime(freq, now); o.frequency.exponentialRampToValueAtTime(freq * 1.5, now + 0.05);
+        g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.035, now + 0.01); g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        o.connect(g); g.connect(ambientGain); o.start(now); o.stop(now + 0.18);
+    }
+
+    // === ZELDA-STYLE SFX ===
+
+    // Menu click - short, clean
     function playClick() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'square';
-        osc.frequency.value = 800;
-        gain.gain.setValueAtTime(0.08, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-        osc.connect(gain);
-        gain.connect(sfxGain);
-        osc.start(now);
-        osc.stop(now + 0.05);
+        playNote(880, now, 0.06, 0.1, 'square');
     }
 
+    // Dice roll - tabla de madera
     function playDiceRoll() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        for (var i = 0; i < 10; i++) {
-            var t = now + i * 0.05;
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(200 + Math.random() * 500, t);
-            gain.gain.setValueAtTime(0.08 + Math.random() * 0.04, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-            osc.connect(gain);
-            gain.connect(sfxGain);
-            osc.start(t);
-            osc.stop(t + 0.05);
+        for (var i = 0; i < 8; i++) {
+            var t = now + i * 0.06;
+            var o = ctx.createOscillator(); var g = ctx.createGain();
+            o.type = 'triangle';
+            o.frequency.setValueAtTime(150 + Math.random() * 400, t);
+            g.gain.setValueAtTime(0.1 - i * 0.01, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+            o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.06);
         }
+        // Wooden thud at end
+        var n = ctx.currentTime;
+        var thud = ctx.createOscillator(); var tg = ctx.createGain();
+        thud.type = 'sine'; thud.frequency.value = 100;
+        tg.gain.setValueAtTime(0, n + 0.45); tg.gain.linearRampToValueAtTime(0.12, n + 0.46); tg.gain.exponentialRampToValueAtTime(0.001, n + 0.6);
+        thud.connect(tg); tg.connect(sfxGain); thud.start(n + 0.45); thud.stop(n + 0.65);
     }
 
+    // SUCCESS - Zelda "puzzle solved" (ascending C-E-G with harmony)
     function playSuccess() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        var notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-        notes.forEach(function(freq, i) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0, now + i * 0.15);
-            gain.gain.linearRampToValueAtTime(0.15, now + i * 0.15 + 0.05);
-            gain.gain.linearRampToValueAtTime(0.08, now + i * 0.15 + 0.4);
-            gain.gain.linearRampToValueAtTime(0, now + 0.9);
-            osc.connect(gain);
-            gain.connect(sfxGain);
-            osc.start(now + i * 0.15);
-            osc.stop(now + 1.0);
-        });
+        // Main melody: C5 → E5 → G5 (triangle, retro)
+        playNote(523.25, now, 0.25, 0.18, 'triangle');
+        playNote(659.25, now + 0.2, 0.25, 0.18, 'triangle');
+        playNote(783.99, now + 0.4, 0.45, 0.2, 'triangle');
+        // Harmony underneath
+        playNote(261.63, now, 0.7, 0.06, 'sine'); // C4
+        playNote(329.63, now + 0.2, 0.5, 0.06, 'sine'); // E4
     }
 
+    // CRITICAL - Zelda "item get" (da-da-da-DAAA ascending fanfare)
     function playCritical() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        var notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
-        notes.forEach(function(freq, i) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0, now + i * 0.12);
-            gain.gain.linearRampToValueAtTime(0.18, now + i * 0.12 + 0.04);
-            gain.gain.linearRampToValueAtTime(0.1, now + i * 0.12 + 0.5);
-            gain.gain.linearRampToValueAtTime(0, now + 1.3);
-            osc.connect(gain);
-            gain.connect(sfxGain);
-            osc.start(now + i * 0.12);
-            osc.stop(now + 1.4);
-        });
-
-        // Add sparkle
-        setTimeout(function() { playSparkle(); }, 300);
-        setTimeout(function() { playSparkle(); }, 500);
+        // Iconic ascending: G4 → C5 → E5 → G5 → C6
+        playNote(392, now, 0.12, 0.16, 'triangle');
+        playNote(523.25, now + 0.12, 0.12, 0.16, 'triangle');
+        playNote(659.25, now + 0.24, 0.12, 0.16, 'triangle');
+        playNote(783.99, now + 0.36, 0.5, 0.22, 'triangle');
+        // Hold the high note with octave
+        playNote(1046.5, now + 0.5, 0.8, 0.15, 'triangle');
+        // Bass support
+        playNote(261.63, now + 0.36, 0.9, 0.08, 'sine');
+        playNote(392, now + 0.36, 0.9, 0.06, 'sine');
+        // Sparkle finish
+        setTimeout(function() { playSparkle(); }, 400);
+        setTimeout(function() { playSparkle(); }, 600);
+        setTimeout(function() { playSparkle(); }, 900);
     }
 
+    // FAILURE - Zelda "wrong" (descending minor, short)
     function playFailure() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        var notes = [392, 349.23]; // G4, F4
-        notes.forEach(function(freq, i) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0, now + i * 0.2);
-            gain.gain.linearRampToValueAtTime(0.12, now + i * 0.2 + 0.05);
-            gain.gain.linearRampToValueAtTime(0, now + 0.8);
-            osc.connect(gain);
-            gain.connect(sfxGain);
-            osc.start(now + i * 0.2);
-            osc.stop(now + 0.9);
-        });
+        // Descending: E5 → Eb5 → D5 → ... low
+        playNote(659.25, now, 0.2, 0.14, 'triangle');
+        playNote(554.37, now + 0.18, 0.2, 0.12, 'triangle'); // Db5
+        playNote(440, now + 0.36, 0.4, 0.1, 'triangle'); // A4
+        // Low ominous
+        playNote(220, now + 0.36, 0.5, 0.06, 'sine');
     }
 
+    // HIJINX - Zelda Tingle style (bouncy, goofy)
     function playHijinx() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Boing sound
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
-        osc.frequency.exponentialRampToValueAtTime(200, now + 0.16);
-        osc.frequency.exponentialRampToValueAtTime(900, now + 0.25);
-        osc.frequency.exponentialRampToValueAtTime(300, now + 0.35);
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.linearRampToValueAtTime(0.12, now + 0.2);
-        gain.gain.linearRampToValueAtTime(0, now + 0.5);
-        osc.connect(gain);
-        gain.connect(sfxGain);
-        osc.start(now);
-        osc.stop(now + 0.5);
-
+        // Bouncy notes: up-down-up-down
+        playNote(330, now, 0.1, 0.15, 'square');
+        playNote(494, now + 0.1, 0.1, 0.15, 'square');
+        playNote(330, now + 0.2, 0.1, 0.15, 'square');
+        playNote(659, now + 0.3, 0.1, 0.18, 'square');
+        playNote(330, now + 0.4, 0.1, 0.12, 'square');
         // Slide whistle
-        setTimeout(function() {
-            if (!ctx) return;
-            var osc2 = ctx.createOscillator();
-            var gain2 = ctx.createGain();
-            var t = ctx.currentTime;
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(300, t);
-            osc2.frequency.exponentialRampToValueAtTime(1400, t + 0.12);
-            osc2.frequency.exponentialRampToValueAtTime(250, t + 0.28);
-            gain2.gain.setValueAtTime(0.1, t);
-            gain2.gain.linearRampToValueAtTime(0, t + 0.35);
-            osc2.connect(gain2);
-            gain2.connect(sfxGain);
-            osc2.start(t);
-            osc2.stop(t + 0.4);
-        }, 200);
-
-        // Funny pop
-        setTimeout(function() {
-            if (!ctx) return;
-            var osc3 = ctx.createOscillator();
-            var gain3 = ctx.createGain();
-            var t = ctx.currentTime;
-            osc3.type = 'square';
-            osc3.frequency.setValueAtTime(1000, t);
-            osc3.frequency.exponentialRampToValueAtTime(200, t + 0.08);
-            gain3.gain.setValueAtTime(0.06, t);
-            gain3.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-            osc3.connect(gain3);
-            gain3.connect(sfxGain);
-            osc3.start(t);
-            osc3.stop(t + 0.12);
-        }, 450);
+        var osc = ctx.createOscillator(); var g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now + 0.55);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.68);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.82);
+        g.gain.setValueAtTime(0.1, now + 0.55);
+        g.gain.linearRampToValueAtTime(0, now + 0.9);
+        osc.connect(g); g.connect(sfxGain); osc.start(now + 0.55); osc.stop(now + 0.95);
+        // Pop
+        playNote(1200, now + 0.92, 0.05, 0.08, 'square');
     }
 
+    // TRIUMPH - Zelda "dungeon clear" (full fanfare with brass feel)
     function playTriumph() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Fanfare arpeggio
-        var notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 1046.5];
-        notes.forEach(function(freq, i) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.value = freq;
-            var t = now + i * 0.1;
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.2, t + 0.03);
-            gain.gain.linearRampToValueAtTime(0.12, t + 0.25);
-            gain.gain.linearRampToValueAtTime(0, now + 1.8);
-            osc.connect(gain);
-            gain.connect(sfxGain);
-            osc.start(t);
-            osc.stop(now + 2.0);
-        });
+        // Fanfare motif (trumpet-like with triangle)
+        var melody = [
+            [523.25, 0, 0.15], [523.25, 0.15, 0.15], [523.25, 0.3, 0.15],
+            [659.25, 0.45, 0.12], [783.99, 0.57, 0.12], [1046.5, 0.69, 0.5],
+            [783.99, 1.2, 0.12], [1046.5, 1.32, 0.6]
+        ];
+        melody.forEach(function(n) { playNote(n[0], now + n[1], n[2], 0.2, 'triangle'); });
+
+        // Bass
+        playNote(261.63, now, 0.7, 0.08, 'triangle');
+        playNote(392, now + 0.69, 0.5, 0.08, 'triangle');
+        playNote(523.25, now + 1.2, 0.7, 0.08, 'triangle');
 
         // Cymbal crash
         var noise = createNoiseSource('white', 1);
         if (noise) {
-            var nFilter = ctx.createBiquadFilter();
-            nFilter.type = 'highpass';
-            nFilter.frequency.value = 4000;
-            var nGain = ctx.createGain();
-            nGain.gain.setValueAtTime(0, now + 0.6);
-            nGain.gain.linearRampToValueAtTime(0.1, now + 0.65);
-            nGain.gain.linearRampToValueAtTime(0, now + 1.8);
-            noise.connect(nFilter);
-            nFilter.connect(nGain);
-            nGain.connect(sfxGain);
-            noise.start(now + 0.6);
-            noise.stop(now + 2.0);
+            var nf = ctx.createBiquadFilter(); nf.type = 'highpass'; nf.frequency.value = 5000;
+            var ng = ctx.createGain();
+            ng.gain.setValueAtTime(0, now + 0.69); ng.gain.linearRampToValueAtTime(0.08, now + 0.72); ng.gain.linearRampToValueAtTime(0, now + 1.5);
+            noise.connect(nf); nf.connect(ng); ng.connect(sfxGain);
+            noise.start(now + 0.69); noise.stop(now + 1.6);
         }
 
-        // Second fanfare after a beat
+        // Second fanfare (higher)
         setTimeout(function() {
             if (!ctx) return;
             var t = ctx.currentTime;
-            [1046.5, 1318.5, 1568, 2093].forEach(function(freq, i) {
-                var osc = ctx.createOscillator();
-                var gain = ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.value = freq;
-                var st = t + i * 0.08;
-                gain.gain.setValueAtTime(0, st);
-                gain.gain.linearRampToValueAtTime(0.15, st + 0.03);
-                gain.gain.linearRampToValueAtTime(0, t + 1.0);
-                osc.connect(gain);
-                gain.connect(sfxGain);
-                osc.start(st);
-                osc.stop(t + 1.2);
-            });
-        }, 1200);
+            playNote(1046.5, t, 0.1, 0.18, 'triangle');
+            playNote(1318.5, t + 0.1, 0.1, 0.18, 'triangle');
+            playNote(1568, t + 0.2, 0.1, 0.18, 'triangle');
+            playNote(2093, t + 0.3, 0.7, 0.22, 'triangle');
+            playNote(1046.5, t + 0.3, 0.7, 0.08, 'sine');
+        }, 1500);
+    }
+
+    // SCENE TRANSITION - Zelda "secret discovered" jingle
+    function playSceneTransition() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        // The iconic ascending secret jingle
+        playNote(784, now, 0.12, 0.12, 'triangle');
+        playNote(880, now + 0.1, 0.12, 0.12, 'triangle');
+        playNote(988, now + 0.2, 0.12, 0.12, 'triangle');
+        playNote(1047, now + 0.3, 0.12, 0.12, 'triangle');
+        playNote(1175, now + 0.4, 0.12, 0.14, 'triangle');
+        playNote(1319, now + 0.5, 0.35, 0.16, 'triangle');
+    }
+
+    // SUSPENSE - Low tension build
+    function playSuspense() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        // Low rumble build
+        var o = ctx.createOscillator(); var g = ctx.createGain();
+        o.type = 'sawtooth';
+        var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300;
+        o.frequency.setValueAtTime(80, now); o.frequency.linearRampToValueAtTime(160, now + 0.8);
+        g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.08, now + 0.2); g.gain.linearRampToValueAtTime(0, now + 1.0);
+        o.connect(f); f.connect(g); g.connect(sfxGain); o.start(now); o.stop(now + 1.1);
+        // High stinger
+        playNote(659, now + 0.7, 0.3, 0.1, 'triangle');
+        playNote(622, now + 0.75, 0.25, 0.08, 'triangle'); // Eb5 dissonance
     }
 
     function playClockTick() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = 440;
-        gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        osc.connect(gain);
-        gain.connect(sfxGain);
-        osc.start(now);
-        osc.stop(now + 0.15);
+        // Zelda-style ominous tick
+        playNote(440, now, 0.08, 0.12, 'triangle');
+        playNote(220, now + 0.02, 0.06, 0.06, 'sine');
     }
 
     function playClockAlarm() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        for (var i = 0; i < 4; i++) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'square';
-            osc.frequency.value = 500 + i * 50;
-            var t = now + i * 0.18;
-            gain.gain.setValueAtTime(0.08, t);
-            gain.gain.linearRampToValueAtTime(0, t + 0.13);
-            osc.connect(gain);
-            gain.connect(sfxGain);
-            osc.start(t);
-            osc.stop(t + 0.15);
+        // Zelda low-health style urgent beeps
+        for (var i = 0; i < 6; i++) {
+            playNote(880, now + i * 0.12, 0.06, 0.1, 'square');
+            playNote(440, now + i * 0.12 + 0.06, 0.04, 0.06, 'square');
         }
     }
 
-    // Scene transition chime - gentle harp-like sound
-    function playSceneTransition() {
-        if (!ctx) return;
-        var now = ctx.currentTime;
-        var notes = [659.25, 783.99, 987.77, 1174.66]; // E5, G5, B5, D6
-        notes.forEach(function(freq, i) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            var t = now + i * 0.08;
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.08, t + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-            osc.connect(gain);
-            gain.connect(sfxGain);
-            osc.start(t);
-            osc.stop(t + 0.7);
-        });
-    }
-
-    // Suspense stinger for complications
-    function playSuspense() {
-        if (!ctx) return;
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(100, now);
-        osc.frequency.linearRampToValueAtTime(200, now + 0.6);
-
-        var filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 400;
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.08, now + 0.1);
-        gain.gain.linearRampToValueAtTime(0.06, now + 0.4);
-        gain.gain.linearRampToValueAtTime(0, now + 0.8);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(sfxGain);
-        osc.start(now);
-        osc.stop(now + 0.9);
-    }
-
     // Volume controls
-    function setAmbientVolume(v) {
-        if (ambientGain) ambientGain.gain.value = Math.max(0, Math.min(1, v));
-    }
-
-    function setSfxVolume(v) {
-        if (sfxGain) sfxGain.gain.value = Math.max(0, Math.min(1, v));
-    }
-
-    function toggleMute() {
-        muted = !muted;
-        if (masterGain) masterGain.gain.value = muted ? 0 : 0.7;
-        return muted;
-    }
-
-    function isMuted() {
-        return muted;
-    }
+    function setAmbientVolume(v) { if (ambientGain) ambientGain.gain.value = Math.max(0, Math.min(1, v)); }
+    function setSfxVolume(v) { if (sfxGain) sfxGain.gain.value = Math.max(0, Math.min(1, v)); }
+    function toggleMute() { muted = !muted; if (masterGain) masterGain.gain.value = muted ? 0 : 0.7; return muted; }
+    function isMuted() { return muted; }
 
     return {
-        init: init,
-        resume: resume,
-        playAmbient: playAmbient,
-        stopAmbient: stopAmbient,
-        playClick: playClick,
-        playDiceRoll: playDiceRoll,
-        playSuccess: playSuccess,
-        playCritical: playCritical,
-        playFailure: playFailure,
-        playHijinx: playHijinx,
-        playTriumph: playTriumph,
-        playClockTick: playClockTick,
+        init: init, resume: resume,
+        playAmbient: playAmbient, stopAmbient: stopAmbient,
+        playClick: playClick, playDiceRoll: playDiceRoll,
+        playSuccess: playSuccess, playCritical: playCritical,
+        playFailure: playFailure, playHijinx: playHijinx,
+        playTriumph: playTriumph, playClockTick: playClockTick,
         playClockAlarm: playClockAlarm,
-        playSceneTransition: playSceneTransition,
-        playSuspense: playSuspense,
-        setAmbientVolume: setAmbientVolume,
-        setSfxVolume: setSfxVolume,
-        toggleMute: toggleMute,
-        isMuted: isMuted
+        playSceneTransition: playSceneTransition, playSuspense: playSuspense,
+        setAmbientVolume: setAmbientVolume, setSfxVolume: setSfxVolume,
+        toggleMute: toggleMute, isMuted: isMuted
     };
 })();

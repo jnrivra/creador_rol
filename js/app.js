@@ -161,11 +161,21 @@ window.Carrera.app = (function() {
             });
         }
 
-        // Roll dice button
-        var btnRollDice = document.getElementById('btn-roll-dice');
-        if (btnRollDice) {
-            btnRollDice.addEventListener('click', function() {
-                window.Carrera.adventure.gmRollDice();
+        // Resolve roll button (GM inputs number from kids' physical dice)
+        var btnResolveRoll = document.getElementById('btn-resolve-roll');
+        if (btnResolveRoll) {
+            btnResolveRoll.addEventListener('click', function() {
+                window.Carrera.adventure.gmResolveRoll();
+            });
+        }
+
+        // Enter key on roll input also resolves
+        var rollInput = document.getElementById('gm-roll-input');
+        if (rollInput) {
+            rollInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    window.Carrera.adventure.gmResolveRoll();
+                }
             });
         }
 
@@ -287,7 +297,9 @@ window.Carrera.app = (function() {
 
             if (e.key === ' ') {
                 e.preventDefault();
-                window.Carrera.adventure.gmRollDice();
+                // Focus the roll input
+                var ri = document.getElementById('gm-roll-input');
+                if (ri) ri.focus();
             }
 
             if (e.key === 'n' || e.key === 'N') {

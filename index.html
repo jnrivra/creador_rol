@@ -88,7 +88,7 @@
             <!-- GM Header -->
             <div class="gm-header">
                 <div class="gm-header-left">
-                    <div id="gm-die-display" class="die-indicator die-d8">🎲 <span>d8</span></div>
+                    <div id="gm-die-display" class="die-indicator">⚖️ <span>Normal</span></div>
                     <div class="clock-container">
                         <span class="clock-label">Reloj:</span>
                         <div id="gm-clock-display"></div>
@@ -144,7 +144,7 @@
                         <div class="gm-card-title">📊 Estado</div>
                         <div class="gm-status-row">
                             <div class="gm-status-item">
-                                🎲 Dado: <strong id="gm-current-die">d8</strong>
+                                📈 Dificultad: <strong id="gm-current-die">+0</strong>
                             </div>
                             <div class="gm-status-item">
                                 ⏰ Reloj:
@@ -164,18 +164,20 @@
                         <div id="gm-options"></div>
                     </div>
 
-                    <!-- Dice -->
+                    <!-- Dice Input -->
                     <div class="gm-card">
-                        <div class="gm-card-title">🎲 Dados</div>
+                        <div class="gm-card-title">🎲 Dados de los Niños</div>
                         <div id="gm-last-roll"></div>
-                        <div class="gm-dice-controls">
-                            <button id="btn-roll-dice" class="btn-roll-dice">🎲 Tirar dado</button>
+                        <div class="gm-dice-input-row">
+                            <span style="color:rgba(255,255,255,0.6);font-size:0.8rem;">¿Qué sacaron?</span>
+                            <input type="number" id="gm-roll-input" class="gm-roll-input" min="1" max="20" placeholder="1-20">
                             <label class="gm-advantage-check">
                                 <input type="checkbox" id="gm-advantage-check"> Ventaja
                             </label>
+                            <button id="btn-resolve-roll" class="btn-roll-dice">✅ Resolver</button>
                         </div>
-                        <div class="gm-manual-results">
-                            <span style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-right:0.3rem;">Manual:</span>
+                        <div class="gm-manual-results" style="margin-top:0.5rem;">
+                            <span style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-right:0.3rem;">Forzar:</span>
                             <button class="btn-manual-result btn-manual-critico" data-result="critico">⭐ Crítico</button>
                             <button class="btn-manual-result btn-manual-exito" data-result="exito">✅ Éxito</button>
                             <button class="btn-manual-result btn-manual-complicacion" data-result="complicacion">⚠️ Complicación</button>
@@ -250,7 +252,7 @@
                     </div>
                 </div>
                 <div class="gm-shortcuts">
-                    <kbd>Espacio</kbd> Dado &nbsp; <kbd>N</kbd> Narrativa &nbsp; <kbd>C</kbd> Opciones &nbsp; <kbd>R</kbd> Reenviar &nbsp; <kbd>M</kbd> Mute &nbsp; <kbd>1</kbd>-<kbd>5</kbd> Escena
+                    <kbd>Espacio</kbd> Input dado &nbsp; <kbd>N</kbd> Narrativa &nbsp; <kbd>C</kbd> Opciones &nbsp; <kbd>R</kbd> Reenviar &nbsp; <kbd>M</kbd> Mute &nbsp; <kbd>1</kbd>-<kbd>5</kbd> Escena
                 </div>
             </div>
         </div>

@@ -1,11 +1,12 @@
 // Sistema de Reloj - 4 segmentos
+// Cuando se llena, la dificultad sube (+2)
 window.Carrera = window.Carrera || {};
 
 window.Carrera.clock = (function() {
     var state = {
         segments: 4,
         filled: 0,
-        totalFilled: 0  // Track total across all resets
+        totalFilled: 0
     };
 
     var renderTargets = {
@@ -25,30 +26,23 @@ window.Carrera.clock = (function() {
 
         window.Carrera.audio.playClockTick();
 
-        var dieShrunk = false;
+        var difficultyUp = false;
         if (state.filled >= state.segments) {
-            // Clock full - shrink die
             state.filled = 0;
-            dieShrunk = window.Carrera.dice.shrinkDie();
-            if (dieShrunk) {
-                window.Carrera.audio.playClockAlarm();
-            }
+            // Increase difficulty instead of shrinking die
+            window.Carrera.dice.addDifficultyBonus(2);
+            difficultyUp = true;
+            window.Carrera.audio.playClockAlarm();
         }
 
         render();
-        return { dieShrunk: dieShrunk, filled: state.filled, total: state.totalFilled };
+        return { difficultyUp: difficultyUp, filled: state.filled, total: state.totalFilled };
     }
 
-    function getFilled() {
-        return state.filled;
-    }
-
-    function getTotal() {
-        return state.totalFilled;
-    }
+    function getFilled() { return state.filled; }
+    function getTotal() { return state.totalFilled; }
 
     function isExhausted() {
-        // After 3 full clock cycles (12 segments), beasts are exhausted
         return state.totalFilled >= 12;
     }
 
@@ -75,16 +69,20 @@ window.Carrera.clock = (function() {
             container.appendChild(seg);
         }
 
-        // Update die display
+        // Update difficulty display
         var dieDisplay = document.getElementById(renderTargets.dieId);
         if (dieDisplay) {
-            var die = window.Carrera.dice.getCurrentDie();
-            dieDisplay.innerHTML = window.Carrera.dice.getDieEmoji(die) + ' <span>d' + die + '</span>';
-            dieDisplay.className = 'die-indicator die-d' + die;
+            var bonus = window.Carrera.dice.getDifficultyBonus();
+            if (bonus > 0) {
+                dieDisplay.innerHTML = '📈 <span>+' + bonus + '</span>';
+                dieDisplay.className = 'die-indicator diff-up';
+            } else {
+                dieDisplay.innerHTML = '⚖️ <span>Normal</span>';
+                dieDisplay.className = 'die-indicator';
+            }
         }
     }
 
-    // Manual GM controls
     function manualFill() {
         if (state.filled < state.segments) {
             return fill(1);
