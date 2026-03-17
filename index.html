@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="css/dice.css">
     <link rel="stylesheet" href="css/adventure.css">
     <link rel="stylesheet" href="css/projection.css">
+    <link rel="stylesheet" href="css/gm.css">
 </head>
 <body>
 
@@ -85,72 +86,184 @@
         </div>
     </section>
 
-    <!-- ====== PANTALLA DE ESCENA (JUEGO) ====== -->
+    <!-- ====== PANTALLA DE ESCENA - GM DASHBOARD ====== -->
     <section id="screen-scene" class="screen">
-        <!-- Background layer -->
-        <div id="scene-background" class="scene-background"></div>
+        <!-- Background layer (subtle in GM mode) -->
+        <div id="scene-background" class="scene-background" style="opacity: 0.3;"></div>
 
         <!-- Content layer -->
-        <div class="scene-content">
-            <!-- Status Bar -->
-            <div class="status-bar">
-                <div class="status-left">
-                    <div id="die-display" class="die-indicator die-d8">🎲 <span>d8</span></div>
+        <div class="scene-content" style="background: rgba(0,0,0,0.5);">
+            <!-- GM Header -->
+            <div class="gm-header">
+                <div class="gm-header-left">
+                    <div id="gm-die-display" class="die-indicator die-d8">🎲 <span>d8</span></div>
                     <div class="clock-container">
                         <span class="clock-label">Reloj:</span>
-                        <div id="clock-display"></div>
+                        <div id="gm-clock-display"></div>
                     </div>
-                    <span id="scene-counter">Escena 1/5</span>
+                    <span id="gm-scene-indicator" class="gm-scene-indicator">Escena 1/5</span>
                 </div>
-                <div class="status-right">
+                <div class="gm-header-center">
+                    <span id="gm-connection-status" class="connection-status disconnected">🔴 Sin conexión</span>
+                    <button id="btn-open-player" class="btn-open-player">📺 Abrir Vista Jugadores</button>
+                    <button id="btn-resend-state" class="btn-gm-small" title="Reenviar estado actual al jugador">🔄 Reenviar</button>
+                </div>
+                <div class="gm-header-right">
                     <button id="btn-mute" class="btn-icon" title="Silenciar">🔊</button>
-                    <button id="btn-projection" class="btn-icon" title="Modo Proyección">📺</button>
-                    <button id="btn-gm-panel" class="btn-icon btn-gm-panel-trigger" title="Panel GM">📋</button>
                 </div>
             </div>
 
-            <!-- Scene Main -->
-            <div class="scene-main">
-                <h2 id="scene-title"></h2>
-                <div id="scene-narrative"></div>
-                <div id="dice-area" class="dice-area"></div>
-                <div id="scene-choices"></div>
-                <div id="outcome-area"></div>
+            <!-- GM Dashboard -->
+            <div class="gm-dashboard">
+                <!-- Left Panel: Narrative -->
+                <div class="gm-panel-left">
+                    <!-- Current Scene -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">📖 Escena Actual</div>
+                        <h3 id="gm-scene-title" style="color: white; margin-bottom: 0.5rem; font-size: 1.1rem;"></h3>
+                        <div id="gm-narrative" class="gm-narrative-text"></div>
+                        <button id="btn-send-narrative" class="btn-send-narrative">📤 Enviar narrativa a jugadores</button>
+                    </div>
+
+                    <!-- GM Notes -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">📋 Notas del GM</div>
+                        <div id="gm-notes" class="gm-notes-text"></div>
+                    </div>
+
+                    <!-- Team Tags -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">🏷️ Tags del Equipo</div>
+                        <div id="gm-team-tags" class="gm-team-tags"></div>
+                    </div>
+
+                    <!-- Custom Text -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">✏️ Texto Personalizado</div>
+                        <textarea id="gm-custom-text" class="gm-custom-textarea" placeholder="Escribe algo para narrar a los jugadores..."></textarea>
+                        <button id="btn-send-custom" class="btn-send-narrative">📤 Enviar texto</button>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Controls -->
+                <div class="gm-panel-right">
+                    <!-- Status & Clock -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">📊 Estado</div>
+                        <div class="gm-status-row">
+                            <div class="gm-status-item">
+                                🎲 Dado: <strong id="gm-current-die">d8</strong>
+                            </div>
+                            <div class="gm-status-item">
+                                ⏰ Reloj:
+                                <div id="gm-status-clock" class="clock-container" style="display:inline-flex;gap:0.2rem;"></div>
+                            </div>
+                            <div class="gm-clock-controls">
+                                <button id="btn-clock-fill" class="btn-gm-small">+1</button>
+                                <button id="btn-clock-empty" class="btn-gm-small">-1</button>
+                                <button id="btn-clock-reset" class="btn-gm-small">↺</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scene Options -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">🎯 Opciones de la Escena</div>
+                        <div id="gm-options"></div>
+                    </div>
+
+                    <!-- Dice -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">🎲 Dados</div>
+                        <div id="gm-last-roll"></div>
+                        <div class="gm-dice-controls">
+                            <button id="btn-roll-dice" class="btn-roll-dice">🎲 Tirar dado</button>
+                            <label class="gm-advantage-check">
+                                <input type="checkbox" id="gm-advantage-check"> Ventaja
+                            </label>
+                        </div>
+                        <div class="gm-manual-results">
+                            <span style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-right:0.3rem;">Manual:</span>
+                            <button class="btn-manual-result btn-manual-critico" data-result="critico">⭐ Crítico</button>
+                            <button class="btn-manual-result btn-manual-exito" data-result="exito">✅ Éxito</button>
+                            <button class="btn-manual-result btn-manual-complicacion" data-result="complicacion">⚠️ Complicación</button>
+                            <button class="btn-manual-result btn-manual-juerga" data-result="juerga">🎪 Juerga</button>
+                        </div>
+                        <div id="gm-dice-history" class="gm-dice-history" style="margin-top:0.5rem;"></div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">🧭 Navegación</div>
+                        <div class="gm-nav-row">
+                            <select id="gm-scene-select" class="gm-scene-select">
+                                <option value="scene1">1 - El Mapa Misterioso</option>
+                                <option value="scene2">2 - El Río Rugiente</option>
+                                <option value="scene3">3 - El Túnel de los Susurros</option>
+                                <option value="scene4">4 - La Guarida del Tejón</option>
+                                <option value="scene5">5 - El Tesoro de los Titanes</option>
+                                <option value="victoria">🏆 Victoria</option>
+                            </select>
+                            <button id="btn-go-scene" class="btn-go-scene">Ir →</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">⚡ Acciones Rápidas</div>
+                        <div class="gm-quick-actions">
+                            <button class="btn-quick" id="btn-quick-confetti">🎉 Confetti</button>
+                            <button class="btn-quick" id="btn-quick-triumph">🎺 Fanfarria</button>
+                            <button class="btn-quick" id="btn-quick-success">✅ Éxito SFX</button>
+                            <button class="btn-quick" id="btn-quick-failure">⚠️ Fallo SFX</button>
+                            <button class="btn-quick" id="btn-quick-hijinx">🎪 Juerga SFX</button>
+                            <button class="btn-quick" id="btn-quick-critical">⭐ Crítico SFX</button>
+                            <button class="btn-quick" id="btn-quick-transition">🎵 Transición</button>
+                            <button class="btn-quick" id="btn-quick-suspense">😨 Suspenso</button>
+                        </div>
+                        <div class="gm-quick-actions" style="margin-top:0.4rem;">
+                            <button class="btn-quick btn-ambient" data-ambient="forest">🌲 Bosque</button>
+                            <button class="btn-quick btn-ambient" data-ambient="river">🌊 Río</button>
+                            <button class="btn-quick btn-ambient" data-ambient="tunnel">🌑 Túnel</button>
+                            <button class="btn-quick btn-ambient" data-ambient="den">🦡 Guarida</button>
+                            <button class="btn-quick btn-ambient" data-ambient="treasure">💎 Tesoro</button>
+                            <button class="btn-quick btn-ambient" data-ambient="victory">🏆 Victoria</button>
+                        </div>
+                    </div>
+
+                    <!-- Juergas Library -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">🎪 Biblioteca de Juergas</div>
+                        <div id="gm-juergas" class="gm-quick-actions"></div>
+                    </div>
+
+                    <!-- Game Log -->
+                    <div class="gm-card">
+                        <div class="gm-card-title">📜 Registro</div>
+                        <div id="gm-log" class="gm-log"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Bar -->
+            <div class="gm-bottom-bar">
+                <div class="gm-volume-controls">
+                    <div class="gm-volume-group">
+                        <span class="gm-volume-label">🎵 Ambiente</span>
+                        <input type="range" id="ambient-volume" class="gm-volume-slider" min="0" max="100" value="30">
+                    </div>
+                    <div class="gm-volume-group">
+                        <span class="gm-volume-label">🔔 SFX</span>
+                        <input type="range" id="sfx-volume" class="gm-volume-slider" min="0" max="100" value="50">
+                    </div>
+                </div>
+                <div class="gm-shortcuts">
+                    <kbd>Espacio</kbd> Dado &nbsp; <kbd>N</kbd> Narrativa &nbsp; <kbd>C</kbd> Opciones &nbsp; <kbd>R</kbd> Reenviar &nbsp; <kbd>M</kbd> Mute &nbsp; <kbd>1</kbd>-<kbd>5</kbd> Escena
+                </div>
             </div>
         </div>
 
-        <!-- GM Panel (drawer) -->
-        <div id="gm-panel" class="gm-panel">
-            <div class="gm-panel-header">
-                <span class="gm-panel-title">📋 Panel del Game Master</span>
-                <button id="btn-gm-close" class="btn-gm-close">✕</button>
-            </div>
-
-            <div class="gm-section">
-                <div class="gm-section-title">Notas de la escena</div>
-                <div id="gm-notes"></div>
-            </div>
-
-            <div class="gm-section">
-                <div class="gm-section-title">Controles manuales</div>
-                <div class="gm-controls">
-                    <button id="btn-clock-fill" class="btn-gm">⏰ +1 Reloj</button>
-                    <button id="btn-clock-empty" class="btn-gm">⏰ -1 Reloj</button>
-                </div>
-            </div>
-
-            <div class="gm-section">
-                <div class="gm-section-title">Volumen</div>
-                <div class="gm-slider-group">
-                    <label class="gm-slider-label">🎵 Ambiente</label>
-                    <input type="range" id="ambient-volume" class="gm-slider" min="0" max="100" value="30">
-                    <label class="gm-slider-label">🔔 Efectos</label>
-                    <input type="range" id="sfx-volume" class="gm-slider" min="0" max="100" value="50">
-                </div>
-            </div>
-        </div>
-
-        <!-- Confetti overlay -->
+        <!-- Confetti overlay (for GM preview) -->
         <div id="confetti-container"></div>
     </section>
 
@@ -161,8 +274,8 @@
     <script src="js/dice.js"></script>
     <script src="js/clock.js"></script>
     <script src="js/characters.js"></script>
+    <script src="js/sync.js"></script>
     <script src="js/adventure.js"></script>
-    <script src="js/projection.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

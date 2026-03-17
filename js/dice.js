@@ -138,6 +138,67 @@ window.Carrera.dice = (function() {
         }
     }
 
+    // Animate with a predetermined result (for player tab)
+    function animateRollPredetermined(container, rollResult, callback) {
+        var label = getResultLabel(rollResult.tipo);
+
+        container.innerHTML = '';
+        container.className = 'dice-area active';
+
+        var dieEl = document.createElement('div');
+        dieEl.className = 'die rolling';
+        dieEl.innerHTML = '<span class="die-label">d' + rollResult.dado + '</span><span class="die-value">?</span>';
+        container.appendChild(dieEl);
+
+        if (rollResult.ventaja) {
+            var advEl = document.createElement('div');
+            advEl.className = 'advantage-badge';
+            advEl.textContent = '¡VENTAJA! (2 dados)';
+            container.appendChild(advEl);
+        }
+
+        window.Carrera.audio.playDiceRoll();
+
+        var count = 0;
+        var interval = setInterval(function() {
+            dieEl.querySelector('.die-value').textContent = Math.floor(Math.random() * rollResult.dado) + 1;
+            count++;
+            if (count > 12) {
+                clearInterval(interval);
+                finishRoll();
+            }
+        }, 80);
+
+        function finishRoll() {
+            dieEl.classList.remove('rolling');
+            dieEl.classList.add('settled', label.clase);
+            dieEl.querySelector('.die-value').textContent = rollResult.resultadoFinal;
+
+            if (rollResult.ventaja) {
+                var diceDetail = document.createElement('div');
+                diceDetail.className = 'dice-detail';
+                diceDetail.textContent = 'Dado 1: ' + rollResult.resultado1 + ' | Dado 2: ' + rollResult.resultado2 + ' → Mejor: ' + rollResult.resultadoFinal;
+                container.appendChild(diceDetail);
+            }
+
+            var resultEl = document.createElement('div');
+            resultEl.className = 'dice-result ' + label.clase;
+            resultEl.innerHTML = '<span class="result-emoji">' + label.emoji + '</span> <span class="result-text">' + label.texto + '</span>';
+            container.appendChild(resultEl);
+
+            setTimeout(function() {
+                if (rollResult.tipo === 'critico') window.Carrera.audio.playCritical();
+                else if (rollResult.tipo === 'exito') window.Carrera.audio.playSuccess();
+                else if (rollResult.tipo === 'juerga') window.Carrera.audio.playHijinx();
+                else window.Carrera.audio.playFailure();
+            }, 200);
+
+            setTimeout(function() {
+                if (callback) callback(rollResult);
+            }, 1500);
+        }
+    }
+
     return {
         reset: reset,
         getCurrentDie: getCurrentDie,
@@ -145,6 +206,7 @@ window.Carrera.dice = (function() {
         roll: roll,
         getResultLabel: getResultLabel,
         getDieEmoji: getDieEmoji,
-        animateRoll: animateRoll
+        animateRoll: animateRoll,
+        animateRollPredetermined: animateRollPredetermined
     };
 })();

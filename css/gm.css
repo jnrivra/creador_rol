@@ -1,0 +1,640 @@
+/* === GM Dashboard Layout === */
+.gm-dashboard {
+    display: grid;
+    grid-template-columns: 2fr 3fr;
+    gap: 1rem;
+    padding: 1rem;
+    max-width: 1500px;
+    margin: 0 auto;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    align-content: start;
+}
+
+/* === GM Header === */
+.gm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 1.2rem;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.gm-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gm-header-center {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gm-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.gm-scene-indicator {
+    font-size: 1rem;
+    font-weight: 800;
+    color: white;
+    background: rgba(255,255,255,0.1);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+}
+
+.connection-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+}
+
+.connection-status.connected {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+}
+
+.connection-status.disconnected {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}
+
+.btn-open-player {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.btn-open-player:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+}
+
+/* === GM Cards === */
+.gm-card {
+    background: rgba(20, 20, 35, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(218, 165, 32, 0.25);
+    border-radius: 12px;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.gm-card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* === Left Panel - Narrative === */
+.gm-panel-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.gm-narrative-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.9);
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 0.6rem;
+}
+
+.gm-notes-text {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.05);
+    padding: 0.6rem;
+    border-radius: 8px;
+    border-left: 3px solid var(--gold);
+    white-space: pre-wrap;
+}
+
+.gm-team-tags {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.7);
+}
+
+.gm-tag-match {
+    display: block;
+    padding: 0.2rem 0;
+    color: #4ade80;
+}
+
+.btn-send-narrative {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    width: 100%;
+}
+
+.btn-send-narrative:hover {
+    opacity: 0.9;
+}
+
+/* Custom text area */
+.gm-custom-textarea {
+    width: 100%;
+    min-height: 60px;
+    background: rgba(255,255,255,0.08);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 0.6rem;
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 0.5rem;
+}
+
+.gm-custom-textarea::placeholder {
+    color: rgba(255,255,255,0.3);
+}
+
+.gm-custom-textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+}
+
+/* === Right Panel - Controls === */
+.gm-panel-right {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Status card */
+.gm-status-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.gm-status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: rgba(255,255,255,0.8);
+    font-size: 0.9rem;
+}
+
+.gm-clock-controls {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.btn-gm-small {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+}
+
+.btn-gm-small:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Option cards */
+.gm-option-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 0.8rem;
+    margin-bottom: 0.6rem;
+}
+
+.gm-option-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.gm-option-emoji {
+    font-size: 1.3rem;
+}
+
+.gm-option-text {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: white;
+    flex: 1;
+}
+
+.gm-option-info {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 0.5rem;
+}
+
+.gm-option-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.btn-gm-action {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.btn-send-choices {
+    background: rgba(37, 99, 235, 0.3);
+    color: #93c5fd;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.btn-send-choices:hover {
+    background: rgba(37, 99, 235, 0.5);
+}
+
+.btn-resolve {
+    background: rgba(34, 197, 94, 0.3);
+    color: #86efac;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.btn-resolve:hover {
+    background: rgba(34, 197, 94, 0.5);
+}
+
+/* Dice controls */
+.gm-dice-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.btn-roll-dice {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 800;
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+}
+
+.btn-roll-dice:hover {
+    transform: scale(1.03);
+}
+
+.gm-advantage-check {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.8rem;
+}
+
+.gm-advantage-check input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--gold);
+}
+
+.gm-manual-results {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.btn-manual-result {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+}
+
+.btn-manual-critico {
+    background: rgba(234, 179, 8, 0.25);
+    color: #fde047;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.btn-manual-exito {
+    background: rgba(34, 197, 94, 0.25);
+    color: #86efac;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.btn-manual-complicacion {
+    background: rgba(249, 115, 22, 0.25);
+    color: #fdba74;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.btn-manual-juerga {
+    background: rgba(168, 85, 247, 0.25);
+    color: #d8b4fe;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.btn-manual-result:hover {
+    opacity: 0.8;
+}
+
+/* Dice history */
+.gm-dice-history {
+    max-height: 80px;
+    overflow-y: auto;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+}
+
+.gm-dice-history-entry {
+    padding: 0.15rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Navigation */
+.gm-nav-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.gm-scene-select {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    font-family: inherit;
+}
+
+.gm-scene-select option {
+    background: #1a1a2e;
+    color: white;
+}
+
+.btn-go-scene {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+}
+
+.btn-go-scene:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Quick actions */
+.gm-quick-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.btn-quick {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.7);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+}
+
+.btn-quick:hover {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+
+/* Game log */
+.gm-log {
+    max-height: 100px;
+    overflow-y: auto;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.4);
+    font-family: monospace;
+}
+
+.gm-log-entry {
+    padding: 0.1rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+/* === Bottom Bar === */
+.gm-bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1.2rem;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.gm-volume-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gm-volume-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.gm-volume-label {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    white-space: nowrap;
+}
+
+.gm-volume-slider {
+    width: 80px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    outline: none;
+}
+
+.gm-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--gold);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.gm-shortcuts {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.3);
+}
+
+.gm-shortcuts kbd {
+    background: rgba(255,255,255,0.1);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    margin: 0 0.1rem;
+}
+
+/* === Option card states === */
+.gm-option-card {
+    transition: border-color 0.3s, background 0.3s, opacity 0.3s;
+}
+
+.gm-option-selected {
+    border-color: rgba(234, 179, 8, 0.5) !important;
+    background: rgba(234, 179, 8, 0.08) !important;
+}
+
+.gm-option-dimmed {
+    opacity: 0.35 !important;
+    pointer-events: none;
+}
+
+.gm-selected-indicator {
+    background: rgba(234,179,8,0.12);
+    border: 1px solid rgba(234,179,8,0.3);
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.8rem;
+    color: #fde047;
+    animation: popIn 0.2s ease-out;
+}
+
+/* === Result Preview === */
+.gm-result-preview {
+    margin: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.gm-preview-entry {
+    padding: 0.3rem 0.5rem;
+    background: rgba(0,0,0,0.2);
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.btn-gm-toggle-preview {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.5);
+    font-size: 0.8rem;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.btn-gm-toggle-preview:hover {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+
+/* === Last Roll Display === */
+.gm-last-roll-display {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.6rem 0.8rem;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid;
+    border-radius: 10px;
+    margin-bottom: 0.6rem;
+}
+
+.gm-last-roll-value {
+    font-size: 2rem;
+    font-weight: 900;
+    min-width: 50px;
+    text-align: center;
+}
+
+.gm-last-roll-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.gm-last-roll-type {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: white;
+}
+
+.gm-last-roll-die {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+}
+
+/* === GM Dashboard scene-content override === */
+#screen-scene .scene-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* === Responsive === */
+@media (max-width: 900px) {
+    .gm-dashboard {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+    }
+
+    .gm-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .gm-bottom-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

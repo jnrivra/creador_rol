@@ -1,4 +1,4 @@
-// Motor de Aventura - Escenas, opciones y resolución
+// Motor de Aventura - GM Dashboard + Sync
 window.Carrera = window.Carrera || {};
 
 window.Carrera.adventure = (function() {
@@ -8,7 +8,10 @@ window.Carrera.adventure = (function() {
         totalScenes: 5,
         flags: {},
         history: [],
-        typeTimer: null
+        currentOption: null,
+        diceHistory: [],
+        gameLog: [],
+        lastRoll: null
     };
 
     function reset() {
@@ -16,7 +19,10 @@ window.Carrera.adventure = (function() {
         state.sceneNumber = 0;
         state.flags = {};
         state.history = [];
-        cancelTyping();
+        state.currentOption = null;
+        state.diceHistory = [];
+        state.gameLog = [];
+        state.lastRoll = null;
         window.Carrera.dice.reset();
         window.Carrera.clock.reset();
         window.Carrera.characters.resetSkills();
@@ -31,131 +37,282 @@ window.Carrera.adventure = (function() {
         var scene = window.Carrera.scenes[sceneId];
         if (!scene) return;
 
-        // Cancel any previous typing
-        cancelTyping();
-
         state.currentSceneId = sceneId;
-        if (sceneId !== 'victoria') state.sceneNumber++;
+        state.currentOption = null;
 
-        // Transition effect
-        var sceneContent = document.querySelector('.scene-content');
-        if (sceneContent) {
-            sceneContent.classList.add('scene-transitioning');
-            setTimeout(function() {
-                // Update ambient audio
-                window.Carrera.audio.playAmbient(scene.ambientPreset);
-                // Render scene
-                renderScene(scene);
-                // Update status bar
-                updateStatusBar();
-                // Remove transition
-                sceneContent.classList.remove('scene-transitioning');
-            }, 300);
-        } else {
-            window.Carrera.audio.playAmbient(scene.ambientPreset);
-            renderScene(scene);
-            updateStatusBar();
+        // Calculate scene number from ID
+        if (sceneId !== 'victoria') {
+            var num = parseInt(sceneId.replace('scene', ''), 10);
+            if (!isNaN(num)) state.sceneNumber = num;
         }
 
-        // Log
-        state.history.push(sceneId);
-    }
+        // Reset advantage checkbox
+        var advCheck = document.getElementById('gm-advantage-check');
+        if (advCheck) advCheck.checked = false;
 
-    function renderScene(scene) {
-        var narrativeEl = document.getElementById('scene-narrative');
-        var choicesEl = document.getElementById('scene-choices');
-        var titleEl = document.getElementById('scene-title');
-        var diceArea = document.getElementById('dice-area');
-        var outcomeArea = document.getElementById('outcome-area');
-        var gmNotes = document.getElementById('gm-notes');
+        // Scene transition chime + ambient
+        window.Carrera.audio.playSceneTransition();
+        window.Carrera.sync.send('effect_play', { effect: 'scene_transition' });
+        window.Carrera.audio.playAmbient(scene.ambientPreset);
 
-        // Background
+        // Render GM dashboard
+        renderGMScene(scene);
+        updateGMStatus();
+        clearLastRollDisplay();
+
+        // Send to player
+        window.Carrera.sync.send('scene_load', {
+            titulo: scene.titulo,
+            emoji: scene.emoji,
+            ambientPreset: scene.ambientPreset,
+            backgroundClass: scene.backgroundClass
+        });
+
+        sendStatusUpdate();
+
+        // Auto-send narrative, then choices AFTER narrative would finish typing
+        // Average narrative ~200 chars × 18ms = ~3.6s. Use 4s delay for choices.
+        setTimeout(function() {
+            sendNarrativeToPlayer();
+        }, 400);
+
+        if (scene.opciones && scene.opciones.length > 0) {
+            var narrativeLen = (scene.narrativa || '').length;
+            var typingTime = Math.max(3000, narrativeLen * 18 + 1000); // Wait for typing + 1s buffer
+            setTimeout(function() {
+                sendChoicesToPlayer(scene);
+            }, typingTime);
+        }
+
+        // Background (subtle on GM)
         var bgEl = document.getElementById('scene-background');
         if (bgEl) {
             bgEl.className = 'scene-background ' + (scene.backgroundClass || '');
-            renderBackgroundExtras(bgEl, scene.backgroundClass);
+            bgEl.style.opacity = '0.3';
         }
 
-        // Title
-        if (titleEl) {
-            titleEl.innerHTML = scene.emoji + ' ' + scene.titulo;
-        }
+        state.history.push(sceneId);
+        addLog('Escena cargada: ' + scene.emoji + ' ' + scene.titulo);
 
-        // Narrative
-        if (narrativeEl) {
-            narrativeEl.textContent = '';
-            narrativeEl.classList.add('typing');
-            typeText(narrativeEl, scene.narrativa, function() {
-                narrativeEl.classList.remove('typing');
-            });
-        }
-
-        // Clear previous
-        if (diceArea) { diceArea.innerHTML = ''; diceArea.className = 'dice-area'; }
-        if (outcomeArea) { outcomeArea.innerHTML = ''; outcomeArea.style.display = 'none'; }
-
-        // Victory screen
         if (scene.id === 'victoria') {
-            renderVictory(scene);
+            handleVictory(scene);
+        }
+    }
+
+    // --- Resend current state (for player reconnection) ---
+
+    function resendCurrentState() {
+        var scene = window.Carrera.scenes[state.currentSceneId];
+        if (!scene) return;
+
+        window.Carrera.sync.send('scene_load', {
+            titulo: scene.titulo,
+            emoji: scene.emoji,
+            ambientPreset: scene.ambientPreset,
+            backgroundClass: scene.backgroundClass
+        });
+        sendStatusUpdate();
+
+        setTimeout(function() {
+            sendNarrativeToPlayer();
+        }, 400);
+
+        if (scene.opciones && scene.opciones.length > 0) {
+            var narrativeLen = (scene.narrativa || '').length;
+            var typingTime = Math.max(3000, narrativeLen * 18 + 1000);
+            setTimeout(function() {
+                sendChoicesToPlayer(scene);
+            }, typingTime);
+        }
+
+        addLog('Estado reenviado a jugadores');
+        flashSendConfirmation('btn-resend-state');
+    }
+
+    // --- Render GM ---
+
+    function renderGMScene(scene) {
+        var titleEl = document.getElementById('gm-scene-title');
+        if (titleEl) titleEl.textContent = scene.emoji + ' ' + scene.titulo;
+
+        var narrativeEl = document.getElementById('gm-narrative');
+        if (narrativeEl) narrativeEl.textContent = scene.narrativa || '';
+
+        var notesEl = document.getElementById('gm-notes');
+        if (notesEl) {
+            var notesText = scene.notasGM || '';
+            var teamNote = getTeamRelevanceNote(scene);
+            if (teamNote) notesText += '\n\n🎯 ' + teamNote;
+            notesEl.textContent = notesText;
+        }
+
+        renderTeamTags(scene);
+        renderGMOptions(scene);
+
+        var indicator = document.getElementById('gm-scene-indicator');
+        if (indicator) {
+            indicator.textContent = scene.id === 'victoria' ?
+                '🏆 ¡Victoria!' :
+                'Escena ' + state.sceneNumber + '/' + state.totalScenes;
+        }
+
+        var select = document.getElementById('gm-scene-select');
+        if (select) select.value = scene.id;
+    }
+
+    function renderTeamTags(scene) {
+        var container = document.getElementById('gm-team-tags');
+        if (!container) return;
+
+        var team = window.Carrera.characters.getTeam();
+        var html = '';
+
+        team.forEach(function(p) {
+            html += '<div style="margin-bottom:0.4rem;">';
+            html += '<strong style="color:white;">' + p.emoji + ' ' + p.nombre + ':</strong><br>';
+            var tags = [
+                { name: p.habilidad.nombre, type: '⚡', used: p.habilidad.usada },
+                { name: p.herramienta.nombre, type: '🔧' },
+                { name: p.talento.nombre, type: '✨' },
+                { name: p.rasgo.nombre, type: '🐾' }
+            ];
+            html += tags.map(function(t) {
+                var isRelevant = false;
+                var isAutoSuccess = false;
+                if (scene.opciones) {
+                    scene.opciones.forEach(function(op) {
+                        if (op.tagsRelevantes && op.tagsRelevantes.indexOf(t.name) !== -1) isRelevant = true;
+                        if (op.autoExitoTags && op.autoExitoTags.indexOf(t.name) !== -1) isAutoSuccess = true;
+                    });
+                }
+                var label = t.type + ' ' + t.name;
+                if (t.used) label += ' (usada)';
+                if (isAutoSuccess) return '<span style="color:#4ade80;font-weight:700;">⚡ ' + t.name + '</span>';
+                if (isRelevant) return '<span class="gm-tag-match">★ ' + t.name + '</span>';
+                return '<span style="color:rgba(255,255,255,0.4);font-size:0.8rem;">' + label + '</span>';
+            }).join(' · ');
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    function renderGMOptions(scene) {
+        var container = document.getElementById('gm-options');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (!scene.opciones || scene.opciones.length === 0) {
+            container.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:0.8rem;">Sin opciones (escena final)</div>';
             return;
         }
 
-        // Choices
-        if (choicesEl) {
-            choicesEl.innerHTML = '';
-            choicesEl.style.opacity = '0';
+        scene.opciones.forEach(function(opcion, index) {
+            var card = document.createElement('div');
+            card.className = 'gm-option-card';
+            card.dataset.optionText = opcion.texto;
 
-            scene.opciones.forEach(function(opcion) {
-                var btn = document.createElement('button');
-                btn.className = 'choice-btn';
-                btn.innerHTML = '<span class="choice-emoji">' + opcion.emoji + '</span> <span class="choice-text">' + opcion.texto + '</span>';
+            // Header
+            var header = '<div class="gm-option-header">';
+            header += '<span class="gm-option-emoji">' + opcion.emoji + '</span>';
+            header += '<span class="gm-option-text">' + opcion.texto + '</span>';
+            if (opcion.requiereTirada) {
+                header += '<button class="btn-gm-toggle-preview" title="Ver resultados posibles">👁</button>';
+            }
+            header += '</div>';
 
-                // Show advantage indicator
-                if (opcion.requiereTirada) {
-                    var hasAdv = window.Carrera.characters.checkAdvantage(opcion.tagsRelevantes);
-                    var hasAutoSuccess = opcion.autoExitoTags && window.Carrera.characters.checkAutoSuccess(opcion.autoExitoTags);
-                    var skillAuto = window.Carrera.characters.checkSkillAutoSuccess(opcion.tagsRelevantes);
+            // Info line
+            var info = buildOptionInfo(opcion);
 
-                    if (hasAutoSuccess || skillAuto) {
-                        btn.innerHTML += ' <span class="choice-badge auto-success">⚡ ¡Auto-éxito!</span>';
-                    } else if (hasAdv) {
-                        btn.innerHTML += ' <span class="choice-badge advantage">🎲🎲 ¡Ventaja!</span>';
-                    } else {
-                        btn.innerHTML += ' <span class="choice-badge roll">🎲 Tirada</span>';
+            // Result preview (hidden by default)
+            var preview = '';
+            if (opcion.requiereTirada && opcion.resultados) {
+                preview = '<div class="gm-result-preview" style="display:none;">';
+                var types = ['critico', 'exito', 'complicacion', 'juerga'];
+                var labels = {
+                    critico: { emoji: '⭐', name: 'Crítico', color: '#fde047' },
+                    exito: { emoji: '✅', name: 'Éxito', color: '#86efac' },
+                    complicacion: { emoji: '⚠️', name: 'Complicación', color: '#fdba74' },
+                    juerga: { emoji: '🎪', name: 'Juerga', color: '#d8b4fe' }
+                };
+                types.forEach(function(tipo) {
+                    var r = opcion.resultados[tipo];
+                    if (r) {
+                        var l = labels[tipo];
+                        preview += '<div class="gm-preview-entry" style="border-left: 2px solid ' + l.color + ';">';
+                        preview += '<strong style="color:' + l.color + ';">' + l.emoji + ' ' + l.name + '</strong>';
+                        if (r.reloj) preview += ' <span style="color:rgba(255,255,255,0.4);font-size:0.7rem;">⏰+' + r.reloj + '</span>';
+                        if (r.flag) preview += ' <span style="color:rgba(255,255,255,0.4);font-size:0.7rem;">🏴' + r.flag + '</span>';
+                        preview += '<div style="color:rgba(255,255,255,0.6);font-size:0.75rem;margin-top:0.15rem;">' + r.texto.substring(0, 100) + (r.texto.length > 100 ? '...' : '') + '</div>';
+                        preview += '</div>';
                     }
-                }
-
-                // Flag-based auto success indicator
-                if (opcion.autoExitoFlags) {
-                    var hasFlag = opcion.autoExitoFlags.some(function(f) { return state.flags[f]; });
-                    if (hasFlag) {
-                        btn.innerHTML += ' <span class="choice-badge auto-success">🎁 ¡Regalo útil!</span>';
-                    }
-                }
-
-                btn.addEventListener('click', function() {
-                    handleChoice(opcion);
                 });
+                preview += '</div>';
+            }
 
-                choicesEl.appendChild(btn);
+            // Action buttons
+            var actions = '<div class="gm-option-actions">';
+            actions += '<button class="btn-gm-action btn-send-choices">📤 Enviar opciones</button>';
+            actions += '<button class="btn-gm-action btn-resolve">▶ Resolver</button>';
+            actions += '</div>';
+
+            card.innerHTML = header + info + preview + actions;
+            container.appendChild(card);
+
+            // Toggle preview
+            var toggleBtn = card.querySelector('.btn-gm-toggle-preview');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var prev = card.querySelector('.gm-result-preview');
+                    if (prev) {
+                        var isHidden = prev.style.display === 'none';
+                        prev.style.display = isHidden ? 'block' : 'none';
+                        this.textContent = isHidden ? '🔽' : '👁';
+                    }
+                });
+            }
+
+            card.querySelector('.btn-send-choices').addEventListener('click', function() {
+                sendChoicesToPlayer(scene);
+                flashSendConfirmation(this);
             });
 
-            // Fade in choices after a short delay
-            setTimeout(function() {
-                choicesEl.style.opacity = '1';
-            }, 800);
-        }
+            card.querySelector('.btn-resolve').addEventListener('click', function() {
+                gmResolveOption(opcion);
+            });
+        });
+    }
 
-        // GM Notes
-        if (gmNotes) {
-            gmNotes.textContent = scene.notasGM || '';
+    function buildOptionInfo(opcion) {
+        var info = '<div class="gm-option-info">';
+        if (opcion.requiereTirada) {
+            var hasAdv = window.Carrera.characters.checkAdvantage(opcion.tagsRelevantes);
+            var hasAutoSuccess = opcion.autoExitoTags && window.Carrera.characters.checkAutoSuccess(opcion.autoExitoTags);
+            var skillAuto = window.Carrera.characters.checkSkillAutoSuccess(opcion.tagsRelevantes);
+            var flagAuto = opcion.autoExitoFlags && opcion.autoExitoFlags.some(function(f) { return state.flags[f]; });
 
-            // Show which tags the team has that are relevant
-            var teamNote = getTeamRelevanceNote(scene);
-            if (teamNote) {
-                gmNotes.textContent += '\n\n🎯 ' + teamNote;
+            if (hasAutoSuccess || skillAuto || flagAuto) {
+                info += '<span style="color:#4ade80;font-weight:700;">⚡ Auto-éxito</span> ';
+            } else if (hasAdv) {
+                info += '<span style="color:#fbbf24;font-weight:700;">🎲🎲 Ventaja</span> ';
+            } else {
+                info += '🎲 Requiere tirada ';
             }
+
+            if (opcion.tagsRelevantes && opcion.tagsRelevantes.length > 0) {
+                var matchingTags = opcion.tagsRelevantes.filter(function(t) {
+                    return window.Carrera.characters.hasTag(t);
+                });
+                if (matchingTags.length > 0) {
+                    info += '| <span style="color:#4ade80;">' + matchingTags.join(', ') + '</span>';
+                }
+            }
+        } else {
+            info += '<span style="color:#93c5fd;">→ Progresión directa</span>';
         }
+        info += '</div>';
+        return info;
     }
 
     function getTeamRelevanceNote(scene) {
@@ -173,374 +330,519 @@ window.Carrera.adventure = (function() {
         return notes.length > 0 ? 'Tags del equipo relevantes:\n' + notes.join('\n') : '';
     }
 
-    function renderBackgroundExtras(bgEl, bgClass) {
-        // Remove old extras
-        var oldExtras = bgEl.querySelectorAll('.bg-extra');
-        oldExtras.forEach(function(el) { el.remove(); });
+    // --- Visual feedback ---
 
-        if (bgClass === 'bg-forest-clearing') {
-            // Floating leaves
-            for (var i = 0; i < 8; i++) {
-                var leaf = document.createElement('div');
-                leaf.className = 'bg-extra floating-leaf';
-                leaf.textContent = ['🍃', '🍂', '🌿'][Math.floor(Math.random() * 3)];
-                leaf.style.left = Math.random() * 100 + '%';
-                leaf.style.animationDelay = Math.random() * 8 + 's';
-                leaf.style.animationDuration = (6 + Math.random() * 6) + 's';
-                leaf.style.fontSize = (1 + Math.random() * 1.5) + 'rem';
-                bgEl.appendChild(leaf);
-            }
-        } else if (bgClass === 'bg-tunnel') {
-            // Fireflies
-            for (var j = 0; j < 12; j++) {
-                var fly = document.createElement('div');
-                fly.className = 'bg-extra bg-firefly';
-                fly.style.left = (10 + Math.random() * 80) + '%';
-                fly.style.top = (10 + Math.random() * 80) + '%';
-                fly.style.animationDelay = Math.random() * 4 + 's';
-                fly.style.animationDuration = (3 + Math.random() * 4) + 's';
-                bgEl.appendChild(fly);
-            }
-        } else if (bgClass === 'bg-treasure') {
-            // Sparkles
-            for (var k = 0; k < 15; k++) {
-                var sparkle = document.createElement('div');
-                sparkle.className = 'bg-extra bg-sparkle';
-                sparkle.textContent = ['✨', '💫', '⭐'][Math.floor(Math.random() * 3)];
-                sparkle.style.left = (10 + Math.random() * 80) + '%';
-                sparkle.style.top = (10 + Math.random() * 80) + '%';
-                sparkle.style.animationDelay = Math.random() * 3 + 's';
-                sparkle.style.animationDuration = (1.5 + Math.random() * 2) + 's';
-                sparkle.style.fontSize = (0.8 + Math.random() * 1.5) + 'rem';
-                bgEl.appendChild(sparkle);
-            }
-        } else if (bgClass === 'bg-river') {
-            // Water splashes
-            for (var m = 0; m < 5; m++) {
-                var splash = document.createElement('div');
-                splash.className = 'bg-extra bg-splash';
-                splash.textContent = '💧';
-                splash.style.left = (15 + Math.random() * 70) + '%';
-                splash.style.top = (40 + Math.random() * 15) + '%';
-                splash.style.animationDelay = Math.random() * 4 + 's';
-                splash.style.animationDuration = (2 + Math.random() * 2) + 's';
-                bgEl.appendChild(splash);
-            }
-        } else if (bgClass === 'bg-victory') {
-            // Stars
-            for (var n = 0; n < 20; n++) {
-                var star = document.createElement('div');
-                star.className = 'bg-extra bg-star';
-                star.textContent = ['⭐', '🌟', '✨', '💫'][Math.floor(Math.random() * 4)];
-                star.style.left = Math.random() * 100 + '%';
-                star.style.top = Math.random() * 100 + '%';
-                star.style.animationDelay = Math.random() * 3 + 's';
-                star.style.animationDuration = (1 + Math.random() * 2) + 's';
-                star.style.fontSize = (0.8 + Math.random() * 2) + 'rem';
-                bgEl.appendChild(star);
-            }
-        }
+    function flashSendConfirmation(btnOrId) {
+        var btn = typeof btnOrId === 'string' ? document.getElementById(btnOrId) : btnOrId;
+        if (!btn) return;
+        var origText = btn.textContent;
+        btn.textContent = '✅ Enviado';
+        btn.style.background = 'rgba(34, 197, 94, 0.3)';
+        setTimeout(function() {
+            btn.textContent = origText;
+            btn.style.background = '';
+        }, 1200);
     }
 
-    function handleChoice(opcion) {
-        var choicesEl = document.getElementById('scene-choices');
-        var diceArea = document.getElementById('dice-area');
+    // --- Send to Player ---
 
-        // Disable choices
-        if (choicesEl) {
-            var buttons = choicesEl.querySelectorAll('.choice-btn');
-            buttons.forEach(function(b) { b.disabled = true; b.classList.add('disabled'); });
-        }
+    function sendNarrativeToPlayer() {
+        var scene = window.Carrera.scenes[state.currentSceneId];
+        if (!scene) return;
+        window.Carrera.sync.send('narrative_show', { text: scene.narrativa });
+        addLog('📤 Narrativa enviada');
+    }
 
-        window.Carrera.audio.playClick();
+    function sendChoicesToPlayer(scene) {
+        if (!scene) scene = window.Carrera.scenes[state.currentSceneId];
+        if (!scene || !scene.opciones) return;
+
+        var choices = scene.opciones.map(function(op) {
+            var badge = '';
+            var badgeClass = '';
+            if (op.requiereTirada) {
+                var hasAdv = window.Carrera.characters.checkAdvantage(op.tagsRelevantes);
+                var hasAutoSuccess = op.autoExitoTags && window.Carrera.characters.checkAutoSuccess(op.autoExitoTags);
+                var skillAuto = window.Carrera.characters.checkSkillAutoSuccess(op.tagsRelevantes);
+                var flagAuto = op.autoExitoFlags && op.autoExitoFlags.some(function(f) { return state.flags[f]; });
+
+                if (hasAutoSuccess || skillAuto || flagAuto) {
+                    badge = '⚡ ¡Auto-éxito!';
+                    badgeClass = 'auto-success';
+                } else if (hasAdv) {
+                    badge = '🎲🎲 ¡Ventaja!';
+                    badgeClass = 'advantage';
+                } else {
+                    badge = '🎲 Tirada';
+                    badgeClass = 'roll';
+                }
+            }
+
+            return { emoji: op.emoji, texto: op.texto, badge: badge, badgeClass: badgeClass };
+        });
+
+        window.Carrera.sync.send('choices_show', { choices: choices });
+        addLog('📤 Opciones enviadas');
+    }
+
+    function sendStatusUpdate() {
+        window.Carrera.sync.send('status_update', {
+            currentDie: window.Carrera.dice.getCurrentDie(),
+            clockFilled: window.Carrera.clock.getFilled(),
+            sceneLabel: state.currentSceneId === 'victoria' ?
+                '🏆 ¡Victoria!' :
+                'Escena ' + state.sceneNumber + '/' + state.totalScenes
+        });
+    }
+
+    // --- GM Resolve ---
+
+    function gmResolveOption(opcion) {
+        state.currentOption = opcion;
+        var sync = window.Carrera.sync;
+
+        sync.send('choices_hide', {});
 
         if (!opcion.requiereTirada) {
-            // Direct progression
-            showOutcome(opcion.narrativaResultado || '', opcion.siguienteEscena);
+            var text = opcion.narrativaResultado || '';
+            sync.send('outcome_show', { text: text });
+            addLog('▶ Sin tirada: ' + opcion.texto);
+            showGMOutcome(text, opcion.siguienteEscena, 'direct');
             return;
         }
 
-        // Check for auto-success via tags
+        // Auto-success via tags
         if (opcion.autoExitoTags && window.Carrera.characters.checkAutoSuccess(opcion.autoExitoTags)) {
-            showAutoSuccess(opcion, '¡La herramienta perfecta!');
+            resolveAutoSuccess(opcion, '⚡ ¡La herramienta perfecta!');
             return;
         }
 
-        // Check for auto-success via flags
+        // Auto-success via flags
         if (opcion.autoExitoFlags) {
             var hasFlag = opcion.autoExitoFlags.some(function(f) { return state.flags[f]; });
             if (hasFlag) {
-                showAutoSuccess(opcion, '¡El regalo de antes les ayuda!');
+                resolveAutoSuccess(opcion, '🎁 ¡El regalo de antes les ayuda!');
                 return;
             }
         }
 
-        // Check for skill auto-success (first use)
+        // Skill auto-success
         var skillPlayer = window.Carrera.characters.checkSkillAutoSuccess(opcion.tagsRelevantes);
         if (skillPlayer) {
             window.Carrera.characters.markSkillUsed(skillPlayer.id);
-            showSkillAutoSuccess(opcion, skillPlayer);
+            var resultado = opcion.resultados.exito;
+            var banner = skillPlayer.emoji + ' ¡' + skillPlayer.nombre + ' usa ' + skillPlayer.habilidad.nombre + '!';
+
+            if (resultado.flag) state.flags[resultado.flag] = true;
+
+            sync.send('outcome_show', {
+                banner: banner,
+                bannerClass: 'auto-success-banner skill-banner',
+                text: resultado.texto
+            });
+            sync.send('effect_play', { effect: 'critical' });
+            window.Carrera.audio.playCritical();
+
+            addLog('⚡ Auto-éxito habilidad: ' + skillPlayer.nombre);
+            showGMOutcome(banner + '\n' + resultado.texto, opcion.siguienteEscena, 'critico');
             return;
         }
 
-        // Check for advantage
+        // Needs dice roll
         var hasAdvantage = window.Carrera.characters.checkAdvantage(opcion.tagsRelevantes);
 
-        // Check for advantage from flags
         if (opcion.ventajaConFlags) {
             var flagAdvantage = opcion.ventajaConFlags.some(function(f) { return state.flags[f]; });
             if (flagAdvantage) hasAdvantage = true;
         }
 
-        // Check for extra clue advantage
         if (opcion.usaPistaExtra && state.flags.pistaExtra) {
             hasAdvantage = true;
         }
 
-        // Roll dice
-        if (diceArea) {
-            window.Carrera.dice.animateRoll(diceArea, hasAdvantage, function(result) {
-                resolveRoll(opcion, result);
-            });
-        }
+        var advCheck = document.getElementById('gm-advantage-check');
+        if (advCheck) advCheck.checked = hasAdvantage;
+
+        highlightSelectedOption(opcion);
+
+        addLog('🎯 Seleccionada: ' + opcion.texto + (hasAdvantage ? ' (ventaja)' : '') + ' — Tira dado o resultado manual');
     }
 
-    function showAutoSuccess(opcion, message) {
-        var outcomeArea = document.getElementById('outcome-area');
+    function highlightSelectedOption(opcion) {
+        var container = document.getElementById('gm-options');
+        if (!container) return;
+
+        var existing = container.querySelector('.gm-selected-indicator');
+        if (existing) existing.remove();
+
+        var indicator = document.createElement('div');
+        indicator.className = 'gm-selected-indicator';
+        indicator.innerHTML = '🎯 <strong>' + opcion.emoji + ' ' + opcion.texto + '</strong><br><span style="font-size:0.75rem;opacity:0.7;">Usa 🎲 Tirar dado (o Espacio) • O elige resultado manual abajo</span>';
+        container.insertBefore(indicator, container.firstChild);
+
+        var cards = container.querySelectorAll('.gm-option-card');
+        cards.forEach(function(card) {
+            if (card.dataset.optionText === opcion.texto) {
+                card.classList.add('gm-option-selected');
+            } else {
+                card.classList.add('gm-option-dimmed');
+            }
+        });
+    }
+
+    function resolveAutoSuccess(opcion, message) {
         var resultado = opcion.resultados.exito;
+        if (resultado.flag) state.flags[resultado.flag] = true;
 
-        if (outcomeArea) {
-            outcomeArea.style.display = 'block';
-            outcomeArea.innerHTML =
-                '<div class="auto-success-banner">⚡ ' + message + '</div>' +
-                '<p class="outcome-text">' + resultado.texto + '</p>';
+        window.Carrera.sync.send('outcome_show', {
+            banner: message,
+            bannerClass: 'auto-success-banner',
+            text: resultado.texto
+        });
+        window.Carrera.sync.send('effect_play', { effect: 'success' });
+        window.Carrera.audio.playSuccess();
 
-            if (resultado.flag) state.flags[resultado.flag] = true;
+        addLog('⚡ Auto-éxito: ' + message);
+        showGMOutcome(message + '\n' + resultado.texto, opcion.siguienteEscena, 'exito');
+    }
 
-            window.Carrera.audio.playSuccess();
-            addContinueButton(outcomeArea, opcion.siguienteEscena);
+    // --- Dice ---
+
+    function gmRollDice() {
+        var opcion = state.currentOption;
+        if (!opcion) {
+            addLog('⚠️ Selecciona una opción primero (▶ Resolver)');
+            return;
+        }
+
+        var advCheck = document.getElementById('gm-advantage-check');
+        var hasAdvantage = advCheck ? advCheck.checked : false;
+
+        var rollResult = window.Carrera.dice.roll(hasAdvantage);
+
+        window.Carrera.sync.send('dice_roll', { rollResult: rollResult });
+        window.Carrera.audio.playDiceRoll();
+
+        state.lastRoll = rollResult;
+
+        var label = window.Carrera.dice.getResultLabel(rollResult.tipo);
+        state.diceHistory.unshift({
+            die: rollResult.dado,
+            result: rollResult.resultadoFinal,
+            type: rollResult.tipo,
+            advantage: hasAdvantage,
+            label: label.texto
+        });
+        renderDiceHistory();
+        showLastRollDisplay(rollResult);
+
+        addLog('🎲 d' + rollResult.dado + ' → ' + rollResult.resultadoFinal + ' (' + label.texto + ')' + (hasAdvantage ? ' ventaja' : ''));
+
+        // Result sound on GM
+        setTimeout(function() {
+            if (rollResult.tipo === 'critico') window.Carrera.audio.playCritical();
+            else if (rollResult.tipo === 'exito') window.Carrera.audio.playSuccess();
+            else if (rollResult.tipo === 'juerga') window.Carrera.audio.playHijinx();
+            else window.Carrera.audio.playFailure();
+        }, 1200);
+
+        if (opcion) {
+            setTimeout(function() {
+                resolveRollResult(opcion, rollResult);
+            }, 2000);
         }
     }
 
-    function showSkillAutoSuccess(opcion, player) {
-        var outcomeArea = document.getElementById('outcome-area');
-        var resultado = opcion.resultados.exito;
+    function showLastRollDisplay(rollResult) {
+        var container = document.getElementById('gm-last-roll');
+        if (!container) return;
 
-        if (outcomeArea) {
-            outcomeArea.style.display = 'block';
-            outcomeArea.innerHTML =
-                '<div class="auto-success-banner skill-banner">' +
-                player.emoji + ' ¡' + player.nombre + ' usa ' + player.habilidad.nombre + '!</div>' +
-                '<p class="outcome-text">' + resultado.texto + '</p>' +
-                '<p class="skill-note">(' + player.habilidad.nombre + ' ahora dará ventaja en vez de auto-éxito)</p>';
+        var label = window.Carrera.dice.getResultLabel(rollResult.tipo);
+        var colors = { critico: '#fde047', exito: '#86efac', complicacion: '#fdba74', juerga: '#d8b4fe' };
 
-            if (resultado.flag) state.flags[resultado.flag] = true;
+        container.innerHTML =
+            '<div class="gm-last-roll-display" style="border-color: ' + (colors[rollResult.tipo] || '#fff') + ';">' +
+            '<div class="gm-last-roll-value" style="color: ' + (colors[rollResult.tipo] || '#fff') + ';">' +
+            rollResult.resultadoFinal +
+            '</div>' +
+            '<div class="gm-last-roll-info">' +
+            '<span class="gm-last-roll-type">' + label.emoji + ' ' + label.texto + '</span>' +
+            '<span class="gm-last-roll-die">d' + rollResult.dado + (rollResult.ventaja ? ' 🎲🎲' : '') + '</span>' +
+            '</div>' +
+            '</div>';
 
-            window.Carrera.audio.playCritical();
-            addContinueButton(outcomeArea, opcion.siguienteEscena);
-        }
+        container.style.animation = 'none';
+        container.offsetHeight; // reflow
+        container.style.animation = 'popIn 0.3s ease-out';
     }
 
-    function resolveRoll(opcion, rollResult) {
-        var outcomeArea = document.getElementById('outcome-area');
-        var resultado = opcion.resultados[rollResult.tipo];
+    function clearLastRollDisplay() {
+        var container = document.getElementById('gm-last-roll');
+        if (container) container.innerHTML = '';
+    }
 
+    // --- Manual Resolve ---
+
+    function gmManualResolve(tipo) {
+        var opcion = state.currentOption;
+        if (!opcion) {
+            addLog('⚠️ Selecciona una opción primero (click ▶ Resolver)');
+            return;
+        }
+
+        var resultado = opcion.resultados[tipo];
         if (!resultado) resultado = opcion.resultados.complicacion;
 
-        if (outcomeArea) {
-            outcomeArea.style.display = 'block';
-            outcomeArea.innerHTML = '<p class="outcome-text">' + resultado.texto + '</p>';
+        var label = window.Carrera.dice.getResultLabel(tipo);
 
-            // Apply clock fill
-            if (resultado.reloj && resultado.reloj > 0) {
-                setTimeout(function() {
-                    var clockResult = window.Carrera.clock.fill(resultado.reloj);
-                    if (clockResult.dieShrunk) {
-                        var newDie = window.Carrera.dice.getCurrentDie();
-                        var warningEl = document.createElement('div');
-                        warningEl.className = 'clock-warning';
-                        warningEl.innerHTML = '⏰ ¡El reloj se llenó! El dado baja a d' + newDie;
-                        outcomeArea.appendChild(warningEl);
-                    }
-                }, 500);
+        window.Carrera.sync.send('choices_hide', {});
+
+        var effectMap = { critico: 'critical', exito: 'success', complicacion: 'failure', juerga: 'hijinx' };
+        window.Carrera.sync.send('effect_play', { effect: effectMap[tipo] || 'success' });
+
+        window.Carrera.sync.send('outcome_show', {
+            banner: label.emoji + ' ' + label.texto,
+            bannerClass: 'auto-success-banner',
+            text: resultado.texto
+        });
+
+        // Play SFX on GM too
+        if (tipo === 'critico') window.Carrera.audio.playCritical();
+        else if (tipo === 'exito') window.Carrera.audio.playSuccess();
+        else if (tipo === 'juerga') window.Carrera.audio.playHijinx();
+        else window.Carrera.audio.playFailure();
+
+        // Apply clock
+        if (resultado.reloj && resultado.reloj > 0) {
+            var clockResult = window.Carrera.clock.fill(resultado.reloj);
+            sendStatusUpdate();
+            updateGMStatus();
+
+            if (clockResult.dieShrunk) {
+                var newDie = window.Carrera.dice.getCurrentDie();
+                window.Carrera.sync.send('outcome_show', {
+                    text: resultado.texto,
+                    clockWarning: '⏰ ¡El reloj se llenó! El dado baja a d' + newDie
+                });
             }
-
-            // Apply flag
-            if (resultado.flag) {
-                state.flags[resultado.flag] = true;
-            }
-
-            addContinueButton(outcomeArea, opcion.siguienteEscena);
         }
+
+        if (resultado.flag) state.flags[resultado.flag] = true;
+
+        addLog('📝 Manual: ' + label.texto + ' → "' + opcion.texto + '"');
+        showGMOutcome(label.emoji + ' ' + label.texto + '\n' + resultado.texto, opcion.siguienteEscena, tipo);
+
+        state.currentOption = null;
     }
 
-    function addContinueButton(container, nextSceneId) {
-        var btn = document.createElement('button');
-        btn.className = 'btn-continue';
-        btn.innerHTML = '▶ Continuar la aventura';
-        btn.addEventListener('click', function() {
-            window.Carrera.audio.playClick();
+    function resolveRollResult(opcion, rollResult) {
+        var resultado = opcion.resultados[rollResult.tipo];
+        if (!resultado) resultado = opcion.resultados.complicacion;
+
+        var effectMap = { critico: 'critical', exito: 'success', complicacion: 'failure', juerga: 'hijinx' };
+        window.Carrera.sync.send('effect_play', { effect: effectMap[rollResult.tipo] || 'success' });
+
+        var outcomeData = { text: resultado.texto };
+
+        if (resultado.reloj && resultado.reloj > 0) {
+            var clockResult = window.Carrera.clock.fill(resultado.reloj);
+            sendStatusUpdate();
+            updateGMStatus();
+
+            if (clockResult.dieShrunk) {
+                var newDie = window.Carrera.dice.getCurrentDie();
+                outcomeData.clockWarning = '⏰ ¡El reloj se llenó! El dado baja a d' + newDie;
+            }
+
+            window.Carrera.sync.send('effect_play', { effect: 'clock_tick' });
+        }
+
+        window.Carrera.sync.send('outcome_show', outcomeData);
+
+        if (resultado.flag) state.flags[resultado.flag] = true;
+
+        showGMOutcome(resultado.texto, opcion.siguienteEscena, rollResult.tipo);
+        state.currentOption = null;
+    }
+
+    function showGMOutcome(text, nextSceneId, resultType) {
+        var container = document.getElementById('gm-options');
+        if (!container) return;
+
+        var colors = {
+            critico: 'rgba(234,179,8,0.2)', exito: 'rgba(34,197,94,0.2)',
+            complicacion: 'rgba(249,115,22,0.2)', juerga: 'rgba(168,85,247,0.2)',
+            direct: 'rgba(147,197,253,0.2)'
+        };
+        var borderColors = {
+            critico: 'rgba(234,179,8,0.4)', exito: 'rgba(34,197,94,0.4)',
+            complicacion: 'rgba(249,115,22,0.4)', juerga: 'rgba(168,85,247,0.4)',
+            direct: 'rgba(147,197,253,0.4)'
+        };
+
+        var bg = colors[resultType] || colors.exito;
+        var border = borderColors[resultType] || borderColors.exito;
+
+        var nextScene = window.Carrera.scenes[nextSceneId];
+        var nextLabel = nextScene ? (nextScene.emoji + ' ' + nextScene.titulo) : nextSceneId;
+
+        container.innerHTML =
+            '<div class="gm-option-card" style="border-color:' + border + ';background:' + bg + ';">' +
+            '<div style="color:rgba(255,255,255,0.9);font-size:0.85rem;margin-bottom:0.8rem;white-space:pre-wrap;line-height:1.5;">' + text + '</div>' +
+            '<div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">' +
+            '<button class="btn-gm-action btn-resolve" id="btn-gm-continue" style="font-size:0.85rem;padding:0.4rem 1rem;">▶ Continuar → ' + nextLabel + '</button>' +
+            '<button class="btn-gm-action btn-send-choices" id="btn-gm-resend-outcome" style="font-size:0.7rem;">📤 Reenviar resultado</button>' +
+            '</div>' +
+            '</div>';
+
+        document.getElementById('btn-gm-continue').addEventListener('click', function() {
             loadScene(nextSceneId);
         });
 
-        setTimeout(function() {
-            container.appendChild(btn);
-            btn.classList.add('visible');
-        }, 1000);
+        document.getElementById('btn-gm-resend-outcome').addEventListener('click', function() {
+            window.Carrera.sync.send('outcome_show', { text: text });
+            flashSendConfirmation(this);
+        });
     }
 
-    function showOutcome(text, nextSceneId) {
-        var outcomeArea = document.getElementById('outcome-area');
-        if (outcomeArea) {
-            outcomeArea.style.display = 'block';
-            outcomeArea.innerHTML = '<p class="outcome-text">' + text + '</p>';
-            addContinueButton(outcomeArea, nextSceneId);
-        }
-    }
+    // --- Victory ---
 
-    function renderVictory(scene) {
-        var narrativeEl = document.getElementById('scene-narrative');
-        var choicesEl = document.getElementById('scene-choices');
-        var diceArea = document.getElementById('dice-area');
-        var outcomeArea = document.getElementById('outcome-area');
-
+    function handleVictory(scene) {
         var isExhausted = window.Carrera.clock.isExhausted();
         var narrativeText = isExhausted ? scene.narrativaAgotados : scene.narrativa;
+        var team = window.Carrera.characters.getTeam();
 
-        if (narrativeEl) {
-            narrativeEl.textContent = '';
-            typeText(narrativeEl, narrativeText, function() {});
+        var narrativeEl = document.getElementById('gm-narrative');
+        if (narrativeEl) narrativeEl.textContent = narrativeText;
+
+        var optionsEl = document.getElementById('gm-options');
+        if (optionsEl) {
+            var teamHtml = team.map(function(p) { return p.emoji + ' ' + p.nombre; }).join(' · ');
+            optionsEl.innerHTML =
+                '<div class="gm-option-card" style="border-color: var(--gold); text-align: center; background: rgba(234,179,8,0.1);">' +
+                '<div style="font-size:1.3rem;color:var(--gold);font-weight:800;margin-bottom:0.5rem;">🏆 ¡Victoria! 🏆</div>' +
+                '<div style="color:white;margin-bottom:0.5rem;font-size:1rem;">' + teamHtml + '</div>' +
+                '<div style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin-bottom:0.8rem;">' +
+                '📍 Escenas: ' + state.sceneNumber +
+                ' · 🎲 Dado: d' + window.Carrera.dice.getCurrentDie() +
+                ' · ⏰ Reloj: ' + window.Carrera.clock.getTotal() +
+                (isExhausted ? ' · 😴 Agotados' : '') +
+                '</div>' +
+                '<button class="btn-gm-action btn-resolve" id="btn-gm-replay" style="font-size:0.9rem;padding:0.5rem 1.5rem;">🏠 Volver al inicio</button>' +
+                '</div>';
+
+            document.getElementById('btn-gm-replay').addEventListener('click', function() {
+                window.Carrera.audio.stopAmbient();
+                window.Carrera.app.showScreen('title');
+            });
         }
 
-        if (choicesEl) choicesEl.innerHTML = '';
-        if (diceArea) { diceArea.innerHTML = ''; diceArea.className = 'dice-area'; }
-        if (outcomeArea) { outcomeArea.style.display = 'none'; outcomeArea.innerHTML = ''; }
+        // Send to player
+        window.Carrera.sync.send('victory', {
+            titulo: scene.titulo,
+            emoji: scene.emoji,
+            narrativa: narrativeText,
+            team: team.map(function(p) { return { emoji: p.emoji, nombre: p.nombre }; }),
+            sceneNumber: state.sceneNumber,
+            currentDie: window.Carrera.dice.getCurrentDie(),
+            clockTotal: window.Carrera.clock.getTotal()
+        });
 
-        // Play triumph
         setTimeout(function() {
+            window.Carrera.sync.send('effect_play', { effect: 'triumph' });
             window.Carrera.audio.playTriumph();
         }, 500);
 
-        // Launch confetti
-        setTimeout(function() {
-            launchConfetti();
-        }, 1000);
+        setTimeout(function() { window.Carrera.sync.send('confetti', {}); }, 1000);
+        setTimeout(function() { window.Carrera.sync.send('confetti', {}); }, 3000);
+        setTimeout(function() { window.Carrera.sync.send('confetti', {}); }, 5000);
 
-        // Launch more confetti waves
-        setTimeout(function() { launchConfetti(); }, 3000);
-        setTimeout(function() { launchConfetti(); }, 5000);
+        addLog('🏆 ¡VICTORIA!');
+    }
 
-        // Show team summary and replay button
-        setTimeout(function() {
-            if (choicesEl) {
-                var team = window.Carrera.characters.getTeam();
-                var teamHtml = '<div class="victory-team">';
-                team.forEach(function(p) {
-                    teamHtml += '<div class="victory-character"><span class="victory-emoji">' + p.emoji + '</span><span>' + p.nombre + '</span></div>';
-                });
-                teamHtml += '</div>';
+    // --- GM Status ---
 
-                choicesEl.innerHTML = teamHtml +
-                    '<div class="victory-message">🏆 ¡Aventura completada! 🏆</div>' +
-                    '<div class="victory-stats">' +
-                    '<span>📍 Escenas: ' + (state.sceneNumber) + '</span> ' +
-                    '<span>🎲 Dado final: d' + window.Carrera.dice.getCurrentDie() + '</span> ' +
-                    '<span>⏰ Reloj total: ' + window.Carrera.clock.getTotal() + '</span>' +
-                    '</div>' +
-                    '<button class="choice-btn victory-btn" id="btn-replay">🏠 Volver al inicio</button>';
+    function updateGMStatus() {
+        var die = window.Carrera.dice.getCurrentDie();
+        var clockState = window.Carrera.clock.getState();
 
-                var btnReplay = document.getElementById('btn-replay');
-                if (btnReplay) {
-                    btnReplay.addEventListener('click', function() {
-                        window.Carrera.audio.stopAmbient();
-                        window.Carrera.audio.playClick();
-                        window.Carrera.app.showScreen('title');
-                    });
-                }
+        var dieEl = document.getElementById('gm-current-die');
+        if (dieEl) dieEl.textContent = 'd' + die;
+
+        var statusClock = document.getElementById('gm-status-clock');
+        if (statusClock) {
+            statusClock.innerHTML = '';
+            for (var i = 0; i < clockState.segments; i++) {
+                var seg = document.createElement('div');
+                seg.className = 'clock-segment' + (i < clockState.filled ? ' filled' : '');
+                seg.style.width = '14px';
+                seg.style.height = '14px';
+                statusClock.appendChild(seg);
             }
-        }, 2500);
-    }
-
-    function launchConfetti() {
-        var container = document.getElementById('confetti-container');
-        if (!container) return;
-
-        container.style.display = 'block';
-
-        var colors = ['#e76f51', '#f4a261', '#e9c46a', '#2a9d8f', '#264653', '#e63946', '#a855f7', '#3b82f6', '#10b981', '#f43f5e'];
-        var shapes = ['confetti-piece', 'confetti-piece confetti-circle', 'confetti-piece confetti-strip'];
-
-        for (var i = 0; i < 50; i++) {
-            var piece = document.createElement('div');
-            piece.className = shapes[Math.floor(Math.random() * shapes.length)];
-            piece.style.left = Math.random() * 100 + '%';
-            piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-            piece.style.animationDelay = Math.random() * 1.5 + 's';
-            piece.style.animationDuration = (2 + Math.random() * 3) + 's';
-            var size = 6 + Math.random() * 10;
-            piece.style.width = size + 'px';
-            piece.style.height = size + 'px';
-            container.appendChild(piece);
-        }
-
-        setTimeout(function() {
-            // Only remove this batch of confetti
-            var pieces = container.querySelectorAll('.confetti-piece');
-            pieces.forEach(function(p) {
-                if (parseFloat(p.style.animationDelay) < 2) {
-                    p.remove();
-                }
-            });
-        }, 6000);
-    }
-
-    function updateStatusBar() {
-        var sceneCounter = document.getElementById('scene-counter');
-        if (sceneCounter && state.currentSceneId !== 'victoria') {
-            sceneCounter.textContent = 'Escena ' + state.sceneNumber + '/' + state.totalScenes;
-        } else if (sceneCounter) {
-            sceneCounter.textContent = '🏆 ¡Victoria!';
         }
 
         window.Carrera.clock.render();
     }
 
-    // Typing effect with cancellation support
-    function cancelTyping() {
-        if (state.typeTimer) {
-            clearTimeout(state.typeTimer);
-            state.typeTimer = null;
-        }
+    // --- Dice History ---
+
+    function renderDiceHistory() {
+        var container = document.getElementById('gm-dice-history');
+        if (!container) return;
+
+        var colors = { critico: '#fde047', exito: '#86efac', complicacion: '#fdba74', juerga: '#d8b4fe' };
+
+        container.innerHTML = state.diceHistory.slice(0, 15).map(function(entry) {
+            var c = colors[entry.type] || '#fff';
+            return '<div class="gm-dice-history-entry" style="color:' + c + ';">d' + entry.die + ' → ' + entry.result + ' ' + entry.label + (entry.advantage ? ' 🎲🎲' : '') + '</div>';
+        }).join('');
     }
 
-    function typeText(element, text, callback) {
-        cancelTyping();
-        var i = 0;
-        var speed = 22;
-        element.textContent = '';
+    // --- Game Log ---
 
-        function skipToEnd() {
-            cancelTyping();
-            i = text.length;
-            element.textContent = text;
-            element.removeEventListener('click', skipToEnd);
-            if (callback) callback();
-        }
+    function addLog(text) {
+        var timestamp = new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        state.gameLog.unshift({ time: timestamp, text: text });
+        if (state.gameLog.length > 50) state.gameLog.pop();
 
-        function type() {
-            if (i < text.length) {
-                element.textContent += text.charAt(i);
-                i++;
-                state.typeTimer = setTimeout(type, speed);
-            } else {
-                element.removeEventListener('click', skipToEnd);
-                if (callback) callback();
+        var container = document.getElementById('gm-log');
+        if (container) {
+            var entry = document.createElement('div');
+            entry.className = 'gm-log-entry';
+            entry.textContent = '[' + timestamp + '] ' + text;
+            container.insertBefore(entry, container.firstChild);
+
+            while (container.children.length > 50) {
+                container.removeChild(container.lastChild);
             }
         }
 
-        // Allow click to skip typing
-        element.addEventListener('click', skipToEnd);
-        type();
+        try {
+            sessionStorage.setItem('carrera-game-log', JSON.stringify(state.gameLog));
+        } catch (e) {}
+    }
+
+    // --- Juergas Library ---
+
+    function initJuergasLibrary() {
+        var container = document.getElementById('gm-juergas');
+        if (!container) return;
+
+        var juergas = window.Carrera.juergasGenericas || [];
+        juergas.forEach(function(j, i) {
+            var btn = document.createElement('button');
+            btn.className = 'btn-quick';
+            btn.textContent = '🎪 #' + (i + 1);
+            btn.title = j;
+            btn.addEventListener('click', function() {
+                window.Carrera.sync.send('custom_text', { text: j });
+                window.Carrera.sync.send('effect_play', { effect: 'hijinx' });
+                window.Carrera.audio.playHijinx();
+                addLog('🎪 Juerga: ' + j.substring(0, 50) + '...');
+                flashSendConfirmation(btn);
+            });
+            container.appendChild(btn);
+        });
     }
 
     function getState() {
@@ -551,6 +853,15 @@ window.Carrera.adventure = (function() {
         reset: reset,
         start: start,
         loadScene: loadScene,
-        getState: getState
+        getState: getState,
+        sendNarrativeToPlayer: sendNarrativeToPlayer,
+        sendChoicesToPlayer: sendChoicesToPlayer,
+        gmRollDice: gmRollDice,
+        gmManualResolve: gmManualResolve,
+        updateGMStatus: updateGMStatus,
+        sendStatusUpdate: sendStatusUpdate,
+        initJuergasLibrary: initJuergasLibrary,
+        resendCurrentState: resendCurrentState,
+        addLog: addLog
     };
 })();

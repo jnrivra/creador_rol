@@ -405,125 +405,7 @@
     transform: scale(1.05);
 }
 
-/* === GM Panel === */
-.gm-panel {
-    position: fixed;
-    top: 0;
-    right: -350px;
-    width: 340px;
-    height: 100vh;
-    background: rgba(20, 20, 35, 0.95);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    z-index: 100;
-    transition: right 0.3s ease;
-    overflow-y: auto;
-    padding: 1.5rem;
-    box-shadow: -4px 0 20px rgba(0,0,0,0.3);
-}
-
-.gm-panel.open {
-    right: 0;
-}
-
-.gm-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.2rem;
-}
-
-.gm-panel-title {
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: var(--gold);
-}
-
-.btn-gm-close {
-    background: rgba(255,255,255,0.1);
-    color: white;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-}
-
-.gm-section {
-    margin-bottom: 1.2rem;
-}
-
-.gm-section-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: rgba(255,255,255,0.5);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 0.5rem;
-}
-
-#gm-notes {
-    font-size: 0.9rem;
-    line-height: 1.5;
-    color: rgba(255,255,255,0.8);
-    background: rgba(255,255,255,0.05);
-    padding: 0.8rem;
-    border-radius: var(--radius-sm);
-    border-left: 3px solid var(--gold);
-}
-
-.gm-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.btn-gm {
-    background: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.8);
-    font-size: 0.85rem;
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-sm);
-    text-align: left;
-}
-
-.btn-gm:hover {
-    background: rgba(255,255,255,0.2);
-}
-
-.gm-slider-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.gm-slider-label {
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.6);
-}
-
-.gm-slider {
-    width: 100%;
-    height: 6px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: rgba(255,255,255,0.15);
-    border-radius: 3px;
-    outline: none;
-}
-
-.gm-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    background: var(--gold);
-    border-radius: 50%;
-    cursor: pointer;
-}
+/* (Old GM drawer panel removed — now using css/gm.css dashboard) */
 
 /* === Victory Styles === */
 .victory-team {
@@ -584,11 +466,6 @@
     background: rgba(255,255,255,0.1);
     padding: 0.3rem 0.8rem;
     border-radius: 20px;
-}
-
-/* === GM Notes whitespace === */
-#gm-notes {
-    white-space: pre-wrap;
 }
 
 /* === Responsive === */

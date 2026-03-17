@@ -8,6 +8,11 @@ window.Carrera.clock = (function() {
         totalFilled: 0  // Track total across all resets
     };
 
+    var renderTargets = {
+        clockId: 'clock-display',
+        dieId: 'die-display'
+    };
+
     function reset() {
         state.filled = 0;
         state.totalFilled = 0;
@@ -47,8 +52,17 @@ window.Carrera.clock = (function() {
         return state.totalFilled >= 12;
     }
 
+    function setRenderTargets(clockId, dieId) {
+        renderTargets.clockId = clockId || 'clock-display';
+        renderTargets.dieId = dieId || 'die-display';
+    }
+
+    function getState() {
+        return { filled: state.filled, totalFilled: state.totalFilled, segments: state.segments };
+    }
+
     function render() {
-        var container = document.getElementById('clock-display');
+        var container = document.getElementById(renderTargets.clockId);
         if (!container) return;
 
         container.innerHTML = '';
@@ -62,7 +76,7 @@ window.Carrera.clock = (function() {
         }
 
         // Update die display
-        var dieDisplay = document.getElementById('die-display');
+        var dieDisplay = document.getElementById(renderTargets.dieId);
         if (dieDisplay) {
             var die = window.Carrera.dice.getCurrentDie();
             dieDisplay.innerHTML = window.Carrera.dice.getDieEmoji(die) + ' <span>d' + die + '</span>';
@@ -93,6 +107,8 @@ window.Carrera.clock = (function() {
         isExhausted: isExhausted,
         render: render,
         manualFill: manualFill,
-        manualEmpty: manualEmpty
+        manualEmpty: manualEmpty,
+        setRenderTargets: setRenderTargets,
+        getState: getState
     };
 })();

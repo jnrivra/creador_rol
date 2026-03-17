@@ -101,15 +101,63 @@ window.Carrera.audio = (function() {
         windFilter.frequency.value = 300;
         windFilter.Q.value = 0.5;
         var windGain = ctx.createGain();
-        windGain.gain.value = 0.4;
+        windGain.gain.value = 0.35;
         wind.connect(windFilter);
         windFilter.connect(windGain);
         windGain.connect(ambientGain);
         wind.start();
         currentAmbientNodes.push(wind, windFilter, windGain);
 
-        // Birds - randomized chirps using recursive setTimeout
+        // High wind layer for leaves
+        var highWind = createNoiseSource('white', 3);
+        var highFilter = ctx.createBiquadFilter();
+        highFilter.type = 'bandpass';
+        highFilter.frequency.value = 2000;
+        highFilter.Q.value = 1.5;
+        var highGain = ctx.createGain();
+        highGain.gain.value = 0.03;
+        var highLfo = ctx.createOscillator();
+        highLfo.frequency.value = 0.15;
+        var highLfoG = ctx.createGain();
+        highLfoG.gain.value = 0.02;
+        highLfo.connect(highLfoG);
+        highLfoG.connect(highGain.gain);
+        highWind.connect(highFilter);
+        highFilter.connect(highGain);
+        highGain.connect(ambientGain);
+        highWind.start();
+        highLfo.start();
+        currentAmbientNodes.push(highWind, highFilter, highGain, highLfo, highLfoG);
+
+        // Birds
         scheduleBirdChirp(1500, 3500);
+
+        // Crickets / insects
+        scheduleRandomSound(playInsect, 2000, 5000);
+    }
+
+    function playInsect() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sine';
+        var freq = 4000 + Math.random() * 2000;
+        osc.frequency.value = freq;
+        var dur = 0.08 + Math.random() * 0.15;
+        var numBursts = 2 + Math.floor(Math.random() * 4);
+
+        gain.gain.setValueAtTime(0, now);
+        for (var i = 0; i < numBursts; i++) {
+            var t = now + i * dur * 1.5;
+            gain.gain.linearRampToValueAtTime(0.02 + Math.random() * 0.015, t + 0.01);
+            gain.gain.linearRampToValueAtTime(0, t + dur);
+        }
+
+        osc.connect(gain);
+        gain.connect(ambientGain);
+        osc.start(now);
+        osc.stop(now + numBursts * dur * 1.5 + 0.1);
     }
 
     function scheduleBirdChirp(minDelay, maxDelay) {
@@ -165,7 +213,7 @@ window.Carrera.audio = (function() {
     }
 
     function createRiverAmbient() {
-        // Water - white noise through lowpass with LFO
+        // Water surface - white noise through lowpass with LFO
         var water = createNoiseSource('white', 3);
         var waterFilter = ctx.createBiquadFilter();
         waterFilter.type = 'lowpass';
@@ -181,7 +229,7 @@ window.Carrera.audio = (function() {
         lfo.start();
 
         var waterGain = ctx.createGain();
-        waterGain.gain.value = 0.5;
+        waterGain.gain.value = 0.45;
         water.connect(waterFilter);
         waterFilter.connect(waterGain);
         waterGain.connect(ambientGain);
@@ -189,8 +237,42 @@ window.Carrera.audio = (function() {
 
         currentAmbientNodes.push(water, waterFilter, lfo, lfoGain, waterGain);
 
-        // Occasional splash sounds
-        scheduleRandomSound(playSplash, 3000, 6000);
+        // Deep current - brown noise for body of water
+        var deep = createNoiseSource('brown', 3);
+        var deepFilter = ctx.createBiquadFilter();
+        deepFilter.type = 'lowpass';
+        deepFilter.frequency.value = 200;
+        var deepGain = ctx.createGain();
+        deepGain.gain.value = 0.25;
+        deep.connect(deepFilter);
+        deepFilter.connect(deepGain);
+        deepGain.connect(ambientGain);
+        deep.start();
+        currentAmbientNodes.push(deep, deepFilter, deepGain);
+
+        // Babbling - high-freq noise bursts
+        var babble = createNoiseSource('white', 2);
+        var babbleFilter = ctx.createBiquadFilter();
+        babbleFilter.type = 'bandpass';
+        babbleFilter.frequency.value = 3000;
+        babbleFilter.Q.value = 3;
+        var babbleGain = ctx.createGain();
+        babbleGain.gain.value = 0.04;
+        var babbleLfo = ctx.createOscillator();
+        babbleLfo.frequency.value = 1.2;
+        var babbleLfoG = ctx.createGain();
+        babbleLfoG.gain.value = 0.03;
+        babbleLfo.connect(babbleLfoG);
+        babbleLfoG.connect(babbleGain.gain);
+        babble.connect(babbleFilter);
+        babbleFilter.connect(babbleGain);
+        babbleGain.connect(ambientGain);
+        babble.start();
+        babbleLfo.start();
+        currentAmbientNodes.push(babble, babbleFilter, babbleGain, babbleLfo, babbleLfoG);
+
+        // Splashes
+        scheduleRandomSound(playSplash, 2500, 5000);
 
         // Soft birds
         scheduleBirdChirp(4000, 8000);
@@ -655,6 +737,53 @@ window.Carrera.audio = (function() {
         }
     }
 
+    // Scene transition chime - gentle harp-like sound
+    function playSceneTransition() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var notes = [659.25, 783.99, 987.77, 1174.66]; // E5, G5, B5, D6
+        notes.forEach(function(freq, i) {
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            var t = now + i * 0.08;
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.08, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+            osc.connect(gain);
+            gain.connect(sfxGain);
+            osc.start(t);
+            osc.stop(t + 0.7);
+        });
+    }
+
+    // Suspense stinger for complications
+    function playSuspense() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.linearRampToValueAtTime(200, now + 0.6);
+
+        var filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 400;
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.08, now + 0.1);
+        gain.gain.linearRampToValueAtTime(0.06, now + 0.4);
+        gain.gain.linearRampToValueAtTime(0, now + 0.8);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(sfxGain);
+        osc.start(now);
+        osc.stop(now + 0.9);
+    }
+
     // Volume controls
     function setAmbientVolume(v) {
         if (ambientGain) ambientGain.gain.value = Math.max(0, Math.min(1, v));
@@ -688,6 +817,8 @@ window.Carrera.audio = (function() {
         playTriumph: playTriumph,
         playClockTick: playClockTick,
         playClockAlarm: playClockAlarm,
+        playSceneTransition: playSceneTransition,
+        playSuspense: playSuspense,
         setAmbientVolume: setAmbientVolume,
         setSfxVolume: setSfxVolume,
         toggleMute: toggleMute,
