@@ -62,21 +62,41 @@ window.Carrera.audio = (function() {
         return s;
     }
 
-    // Play a note with triangle wave (retro/Zelda feel)
+    // Play a note with warm envelope + optional echo
     function playNote(freq, startTime, duration, vol, waveType) {
         if (!ctx) return;
+        vol = vol || 0.15;
         var osc = ctx.createOscillator();
         var gain = ctx.createGain();
         osc.type = waveType || 'triangle';
         osc.frequency.value = freq;
+
+        // Warm ADSR: quick attack, sustain, smooth release
+        var attack = Math.min(0.03, duration * 0.1);
+        var release = Math.min(0.15, duration * 0.3);
         gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(vol || 0.15, startTime + 0.015);
-        gain.gain.linearRampToValueAtTime(vol * 0.6, startTime + duration * 0.5);
+        gain.gain.linearRampToValueAtTime(vol, startTime + attack);
+        gain.gain.setValueAtTime(vol * 0.85, startTime + duration - release);
         gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
         osc.connect(gain);
         gain.connect(sfxGain);
         osc.start(startTime);
-        osc.stop(startTime + duration + 0.01);
+        osc.stop(startTime + duration + 0.05);
+    }
+
+    // Play note with reverb echo (delayed quieter repeat)
+    function playNoteEcho(freq, startTime, duration, vol, waveType) {
+        playNote(freq, startTime, duration, vol, waveType);
+        playNote(freq, startTime + 0.08, duration * 0.6, vol * 0.25, waveType); // echo
+    }
+
+    // Play a chord (multiple notes at once)
+    function playChord(freqs, startTime, duration, vol, waveType) {
+        var perNote = vol / Math.sqrt(freqs.length); // balance volume
+        freqs.forEach(function(f) {
+            playNote(f, startTime, duration, perNote, waveType);
+        });
     }
 
     // === AMBIENT PRESETS ===
@@ -295,188 +315,231 @@ window.Carrera.audio = (function() {
         o.connect(g); g.connect(ambientGain); o.start(now); o.stop(now + 0.18);
     }
 
-    // === ZELDA-STYLE SFX ===
+    // === SFX ===
 
-    // Menu click - short, clean
     function playClick() {
         if (!ctx) return;
-        var now = ctx.currentTime;
-        playNote(880, now, 0.06, 0.1, 'square');
+        playNote(1200, ctx.currentTime, 0.04, 0.08, 'sine');
+        playNote(800, ctx.currentTime + 0.01, 0.03, 0.04, 'triangle');
     }
 
-    // Dice roll - tabla de madera
     function playDiceRoll() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        for (var i = 0; i < 8; i++) {
-            var t = now + i * 0.06;
-            var o = ctx.createOscillator(); var g = ctx.createGain();
-            o.type = 'triangle';
-            o.frequency.setValueAtTime(150 + Math.random() * 400, t);
-            g.gain.setValueAtTime(0.1 - i * 0.01, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-            o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.06);
+        // Clacking dice sounds - noise bursts at different pitches
+        for (var i = 0; i < 10; i++) {
+            var t = now + i * 0.05 + Math.random() * 0.02;
+            var n = createNoiseSource('white', 0.05);
+            if (!n) continue;
+            var f = ctx.createBiquadFilter(); f.type = 'bandpass';
+            f.frequency.value = 800 + Math.random() * 2000; f.Q.value = 5;
+            var g = ctx.createGain();
+            var v = 0.08 * (1 - i * 0.07);
+            g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+            n.connect(f); f.connect(g); g.connect(sfxGain);
+            n.start(t); n.stop(t + 0.05);
         }
-        // Wooden thud at end
-        var n = ctx.currentTime;
-        var thud = ctx.createOscillator(); var tg = ctx.createGain();
-        thud.type = 'sine'; thud.frequency.value = 100;
-        tg.gain.setValueAtTime(0, n + 0.45); tg.gain.linearRampToValueAtTime(0.12, n + 0.46); tg.gain.exponentialRampToValueAtTime(0.001, n + 0.6);
-        thud.connect(tg); tg.connect(sfxGain); thud.start(n + 0.45); thud.stop(n + 0.65);
+        // Final landing thud
+        playNote(120, now + 0.5, 0.12, 0.1, 'sine');
     }
 
-    // SUCCESS - Zelda "puzzle solved" (ascending C-E-G with harmony)
+    // SUCCESS - Warm major chord resolve (like opening a chest)
     function playSuccess() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Main melody: C5 → E5 → G5 (triangle, retro)
-        playNote(523.25, now, 0.25, 0.18, 'triangle');
-        playNote(659.25, now + 0.2, 0.25, 0.18, 'triangle');
-        playNote(783.99, now + 0.4, 0.45, 0.2, 'triangle');
-        // Harmony underneath
-        playNote(261.63, now, 0.7, 0.06, 'sine'); // C4
-        playNote(329.63, now + 0.2, 0.5, 0.06, 'sine'); // E4
+        // Two-part: pickup note then major chord
+        playNoteEcho(392, now, 0.15, 0.14, 'triangle');       // G4 pickup
+        playNoteEcho(523.25, now + 0.15, 0.4, 0.18, 'triangle'); // C5
+        playNoteEcho(659.25, now + 0.15, 0.4, 0.14, 'triangle'); // E5
+        playNoteEcho(783.99, now + 0.15, 0.5, 0.16, 'triangle'); // G5
+        // Warm bass
+        playNote(130.81, now + 0.15, 0.6, 0.1, 'sine');  // C3
+        playNote(261.63, now + 0.15, 0.5, 0.06, 'sine');  // C4
     }
 
-    // CRITICAL - Zelda "item get" (da-da-da-DAAA ascending fanfare)
+    // CRITICAL - Grand fanfare (very different from success)
     function playCritical() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Iconic ascending: G4 → C5 → E5 → G5 → C6
-        playNote(392, now, 0.12, 0.16, 'triangle');
-        playNote(523.25, now + 0.12, 0.12, 0.16, 'triangle');
-        playNote(659.25, now + 0.24, 0.12, 0.16, 'triangle');
-        playNote(783.99, now + 0.36, 0.5, 0.22, 'triangle');
-        // Hold the high note with octave
-        playNote(1046.5, now + 0.5, 0.8, 0.15, 'triangle');
-        // Bass support
-        playNote(261.63, now + 0.36, 0.9, 0.08, 'sine');
-        playNote(392, now + 0.36, 0.9, 0.06, 'sine');
-        // Sparkle finish
-        setTimeout(function() { playSparkle(); }, 400);
-        setTimeout(function() { playSparkle(); }, 600);
-        setTimeout(function() { playSparkle(); }, 900);
+        // Trumpet call: da-da-da-DAAA
+        playNoteEcho(523.25, now, 0.1, 0.16, 'triangle');       // C5
+        playNoteEcho(523.25, now + 0.1, 0.1, 0.16, 'triangle');  // C5
+        playNoteEcho(523.25, now + 0.2, 0.12, 0.18, 'triangle'); // C5
+        playNoteEcho(783.99, now + 0.35, 0.6, 0.22, 'triangle'); // G5 (hold!)
+
+        // Full chord underneath
+        playChord([261.63, 329.63, 392], now + 0.35, 0.8, 0.18, 'triangle'); // C major
+        playNote(130.81, now + 0.35, 0.9, 0.08, 'sine'); // C3 bass
+
+        // Rising finish
+        playNoteEcho(1046.5, now + 0.7, 0.5, 0.12, 'triangle'); // C6
+        playNoteEcho(1318.5, now + 0.85, 0.4, 0.1, 'triangle'); // E6
+
+        // Sparkle
+        setTimeout(function() { playSparkle(); }, 500);
+        setTimeout(function() { playSparkle(); }, 700);
+        setTimeout(function() { playSparkle(); }, 1000);
     }
 
-    // FAILURE - Zelda "wrong" (descending minor, short)
+    // FAILURE - Descending "wah-wah" trombone
     function playFailure() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Descending: E5 → Eb5 → D5 → ... low
-        playNote(659.25, now, 0.2, 0.14, 'triangle');
-        playNote(554.37, now + 0.18, 0.2, 0.12, 'triangle'); // Db5
-        playNote(440, now + 0.36, 0.4, 0.1, 'triangle'); // A4
-        // Low ominous
-        playNote(220, now + 0.36, 0.5, 0.06, 'sine');
+        // Wah-wah: descending with vibrato
+        var o = ctx.createOscillator(); var g = ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(440, now);        // A4
+        o.frequency.linearRampToValueAtTime(392, now + 0.25); // G4
+        o.frequency.linearRampToValueAtTime(330, now + 0.5);  // E4
+        o.frequency.linearRampToValueAtTime(262, now + 0.8);  // C4
+
+        // Vibrato
+        var vib = ctx.createOscillator(); vib.frequency.value = 5;
+        var vibG = ctx.createGain(); vibG.gain.value = 8;
+        vib.connect(vibG); vibG.connect(o.frequency); vib.start(now);
+
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.16, now + 0.04);
+        g.gain.linearRampToValueAtTime(0.12, now + 0.4);
+        g.gain.linearRampToValueAtTime(0, now + 0.9);
+
+        o.connect(g); g.connect(sfxGain);
+        o.start(now); o.stop(now + 1.0); vib.stop(now + 1.0);
+
+        // Low thud
+        playNote(130, now + 0.5, 0.3, 0.06, 'sine');
     }
 
-    // HIJINX - Zelda Tingle style (bouncy, goofy)
+    // HIJINX - Cartoon spring + slide whistle + pop
     function playHijinx() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Bouncy notes: up-down-up-down
-        playNote(330, now, 0.1, 0.15, 'square');
-        playNote(494, now + 0.1, 0.1, 0.15, 'square');
-        playNote(330, now + 0.2, 0.1, 0.15, 'square');
-        playNote(659, now + 0.3, 0.1, 0.18, 'square');
-        playNote(330, now + 0.4, 0.1, 0.12, 'square');
-        // Slide whistle
-        var osc = ctx.createOscillator(); var g = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(300, now + 0.55);
-        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.68);
-        osc.frequency.exponentialRampToValueAtTime(200, now + 0.82);
-        g.gain.setValueAtTime(0.1, now + 0.55);
-        g.gain.linearRampToValueAtTime(0, now + 0.9);
-        osc.connect(g); g.connect(sfxGain); osc.start(now + 0.55); osc.stop(now + 0.95);
-        // Pop
-        playNote(1200, now + 0.92, 0.05, 0.08, 'square');
+
+        // Spring boing: rapid frequency wobble
+        var boing = ctx.createOscillator(); var bg = ctx.createGain();
+        boing.type = 'sine';
+        boing.frequency.setValueAtTime(200, now);
+        boing.frequency.exponentialRampToValueAtTime(800, now + 0.06);
+        boing.frequency.exponentialRampToValueAtTime(150, now + 0.12);
+        boing.frequency.exponentialRampToValueAtTime(600, now + 0.2);
+        boing.frequency.exponentialRampToValueAtTime(300, now + 0.3);
+        bg.gain.setValueAtTime(0.14, now);
+        bg.gain.linearRampToValueAtTime(0, now + 0.35);
+        boing.connect(bg); bg.connect(sfxGain);
+        boing.start(now); boing.stop(now + 0.4);
+
+        // Silly melody: square wave staccato
+        playNote(523, now + 0.35, 0.08, 0.12, 'square');
+        playNote(659, now + 0.43, 0.08, 0.12, 'square');
+        playNote(523, now + 0.51, 0.08, 0.1, 'square');
+        playNote(784, now + 0.59, 0.12, 0.14, 'square');
+
+        // Slide whistle up
+        var sw = ctx.createOscillator(); var sg = ctx.createGain();
+        sw.type = 'sine';
+        sw.frequency.setValueAtTime(300, now + 0.75);
+        sw.frequency.exponentialRampToValueAtTime(1500, now + 0.95);
+        sg.gain.setValueAtTime(0.1, now + 0.75);
+        sg.gain.linearRampToValueAtTime(0, now + 1.0);
+        sw.connect(sg); sg.connect(sfxGain);
+        sw.start(now + 0.75); sw.stop(now + 1.05);
+
+        // Pop at end
+        playNote(1500, now + 1.0, 0.04, 0.1, 'square');
     }
 
-    // TRIUMPH - Zelda "dungeon clear" (full fanfare with brass feel)
+    // TRIUMPH - Full orchestral fanfare
     function playTriumph() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Fanfare motif (trumpet-like with triangle)
-        var melody = [
-            [523.25, 0, 0.15], [523.25, 0.15, 0.15], [523.25, 0.3, 0.15],
-            [659.25, 0.45, 0.12], [783.99, 0.57, 0.12], [1046.5, 0.69, 0.5],
-            [783.99, 1.2, 0.12], [1046.5, 1.32, 0.6]
+
+        // First phrase: ta-ta-ta-TAAA ta-TAAAA
+        var mel = [
+            [523, 0, 0.12], [523, 0.13, 0.12], [523, 0.26, 0.15],
+            [784, 0.42, 0.25], [659, 0.7, 0.12], [1047, 0.85, 0.5]
         ];
-        melody.forEach(function(n) { playNote(n[0], now + n[1], n[2], 0.2, 'triangle'); });
+        mel.forEach(function(n) { playNoteEcho(n[0], now + n[1], n[2], 0.2, 'triangle'); });
+
+        // Harmony
+        playChord([261, 330, 392], now + 0.42, 0.5, 0.15, 'triangle');
+        playChord([262, 330, 523], now + 0.85, 0.6, 0.15, 'triangle');
 
         // Bass
-        playNote(261.63, now, 0.7, 0.08, 'triangle');
-        playNote(392, now + 0.69, 0.5, 0.08, 'triangle');
-        playNote(523.25, now + 1.2, 0.7, 0.08, 'triangle');
+        playNote(131, now, 0.85, 0.1, 'sine');
+        playNote(262, now + 0.85, 0.6, 0.1, 'sine');
 
-        // Cymbal crash
+        // Cymbal
         var noise = createNoiseSource('white', 1);
         if (noise) {
-            var nf = ctx.createBiquadFilter(); nf.type = 'highpass'; nf.frequency.value = 5000;
+            var nf = ctx.createBiquadFilter(); nf.type = 'highpass'; nf.frequency.value = 6000;
             var ng = ctx.createGain();
-            ng.gain.setValueAtTime(0, now + 0.69); ng.gain.linearRampToValueAtTime(0.08, now + 0.72); ng.gain.linearRampToValueAtTime(0, now + 1.5);
+            ng.gain.setValueAtTime(0, now + 0.42); ng.gain.linearRampToValueAtTime(0.06, now + 0.44);
+            ng.gain.linearRampToValueAtTime(0, now + 1.2);
             noise.connect(nf); nf.connect(ng); ng.connect(sfxGain);
-            noise.start(now + 0.69); noise.stop(now + 1.6);
+            noise.start(now + 0.42); noise.stop(now + 1.3);
         }
 
-        // Second fanfare (higher)
+        // Second phrase after pause
         setTimeout(function() {
             if (!ctx) return;
             var t = ctx.currentTime;
-            playNote(1046.5, t, 0.1, 0.18, 'triangle');
-            playNote(1318.5, t + 0.1, 0.1, 0.18, 'triangle');
-            playNote(1568, t + 0.2, 0.1, 0.18, 'triangle');
-            playNote(2093, t + 0.3, 0.7, 0.22, 'triangle');
-            playNote(1046.5, t + 0.3, 0.7, 0.08, 'sine');
-        }, 1500);
+            playNoteEcho(1047, t, 0.12, 0.18, 'triangle');
+            playNoteEcho(1319, t + 0.12, 0.12, 0.18, 'triangle');
+            playNoteEcho(1568, t + 0.24, 0.12, 0.2, 'triangle');
+            // Final chord
+            playChord([1047, 1319, 1568, 2093], t + 0.38, 0.8, 0.25, 'triangle');
+            playNote(523, t + 0.38, 0.9, 0.1, 'sine');
+        }, 1400);
     }
 
-    // SCENE TRANSITION - Zelda "secret discovered" jingle
+    // SCENE TRANSITION - Gentle harp glissando
     function playSceneTransition() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // The iconic ascending secret jingle
-        playNote(784, now, 0.12, 0.12, 'triangle');
-        playNote(880, now + 0.1, 0.12, 0.12, 'triangle');
-        playNote(988, now + 0.2, 0.12, 0.12, 'triangle');
-        playNote(1047, now + 0.3, 0.12, 0.12, 'triangle');
-        playNote(1175, now + 0.4, 0.12, 0.14, 'triangle');
-        playNote(1319, now + 0.5, 0.35, 0.16, 'triangle');
+        var notes = [523, 587, 659, 784, 880, 1047]; // C major scale
+        notes.forEach(function(f, i) {
+            playNote(f, now + i * 0.07, 0.25, 0.1, 'sine');
+            playNote(f * 2, now + i * 0.07 + 0.02, 0.15, 0.04, 'sine'); // octave shimmer
+        });
     }
 
-    // SUSPENSE - Low tension build
+    // SUSPENSE - Ominous low build with dissonance
     function playSuspense() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Low rumble build
+        // Low drone
         var o = ctx.createOscillator(); var g = ctx.createGain();
         o.type = 'sawtooth';
-        var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300;
-        o.frequency.setValueAtTime(80, now); o.frequency.linearRampToValueAtTime(160, now + 0.8);
-        g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.08, now + 0.2); g.gain.linearRampToValueAtTime(0, now + 1.0);
-        o.connect(f); f.connect(g); g.connect(sfxGain); o.start(now); o.stop(now + 1.1);
-        // High stinger
-        playNote(659, now + 0.7, 0.3, 0.1, 'triangle');
-        playNote(622, now + 0.75, 0.25, 0.08, 'triangle'); // Eb5 dissonance
+        var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 250;
+        o.frequency.setValueAtTime(73.42, now); // D2
+        o.frequency.linearRampToValueAtTime(98, now + 1.0); // G2
+        g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.08, now + 0.3);
+        g.gain.linearRampToValueAtTime(0.06, now + 0.8); g.gain.linearRampToValueAtTime(0, now + 1.2);
+        o.connect(f); f.connect(g); g.connect(sfxGain); o.start(now); o.stop(now + 1.3);
+
+        // Dissonant high notes
+        playNote(466, now + 0.6, 0.4, 0.07, 'triangle'); // Bb4
+        playNote(494, now + 0.65, 0.35, 0.06, 'triangle'); // B4 (clashes)
     }
 
     function playClockTick() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Zelda-style ominous tick
-        playNote(440, now, 0.08, 0.12, 'triangle');
-        playNote(220, now + 0.02, 0.06, 0.06, 'sine');
+        playNote(660, now, 0.06, 0.1, 'triangle');
+        playNote(330, now + 0.03, 0.08, 0.06, 'sine');
     }
 
     function playClockAlarm() {
         if (!ctx) return;
         var now = ctx.currentTime;
-        // Zelda low-health style urgent beeps
-        for (var i = 0; i < 6; i++) {
-            playNote(880, now + i * 0.12, 0.06, 0.1, 'square');
-            playNote(440, now + i * 0.12 + 0.06, 0.04, 0.06, 'square');
+        // Urgent alternating beeps
+        for (var i = 0; i < 5; i++) {
+            var t = now + i * 0.15;
+            playNote(880, t, 0.07, 0.12, 'square');
+            playNote(660, t + 0.07, 0.06, 0.08, 'square');
         }
+        // Final low warning
+        playNote(220, now + 0.75, 0.3, 0.08, 'triangle');
     }
 
     // Volume controls
