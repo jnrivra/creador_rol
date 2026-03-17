@@ -70,18 +70,20 @@ window.Carrera.adventure = (function() {
 
         sendStatusUpdate();
 
-        // Auto-send narrative, then choices 5s after typing finishes
+        // Auto-send narrative at 400ms, then choices 5s after typing ends
+        var narrativeLen = (scene.narrativa || '').length;
+        var typingDuration = narrativeLen * 18;
+
         setTimeout(function() {
             sendNarrativeToPlayer();
-        }, 400);
 
-        if (scene.opciones && scene.opciones.length > 0) {
-            var narrativeLen = (scene.narrativa || '').length;
-            var typingTime = narrativeLen * 18 + 5000; // typing duration + 5s pause
-            setTimeout(function() {
-                sendChoicesToPlayer(scene);
-            }, typingTime);
-        }
+            // Chain: choices arrive 5s after narrative finishes typing
+            if (scene.opciones && scene.opciones.length > 0) {
+                setTimeout(function() {
+                    sendChoicesToPlayer(scene);
+                }, typingDuration + 5000);
+            }
+        }, 400);
 
         // Background (subtle on GM)
         var bgEl = document.getElementById('scene-background');
@@ -112,17 +114,18 @@ window.Carrera.adventure = (function() {
         });
         sendStatusUpdate();
 
+        var narrativeLen = (scene.narrativa || '').length;
+        var typingDuration = narrativeLen * 18;
+
         setTimeout(function() {
             sendNarrativeToPlayer();
-        }, 400);
 
-        if (scene.opciones && scene.opciones.length > 0) {
-            var narrativeLen = (scene.narrativa || '').length;
-            var typingTime = Math.max(3000, narrativeLen * 18 + 1000);
-            setTimeout(function() {
-                sendChoicesToPlayer(scene);
-            }, typingTime);
-        }
+            if (scene.opciones && scene.opciones.length > 0) {
+                setTimeout(function() {
+                    sendChoicesToPlayer(scene);
+                }, typingDuration + 5000);
+            }
+        }, 400);
 
         addLog('Estado reenviado a jugadores');
         flashSendConfirmation('btn-resend-state');
@@ -463,6 +466,15 @@ window.Carrera.adventure = (function() {
         if (advCheck) advCheck.checked = hasAdvantage;
 
         highlightSelectedOption(opcion);
+
+        // Tell player to roll dice!
+        var diff = (opcion.dificultad || 10) + window.Carrera.dice.getDifficultyBonus();
+        window.Carrera.sync.send('roll_prompt', {
+            texto: opcion.texto,
+            emoji: opcion.emoji,
+            dificultad: diff,
+            ventaja: hasAdvantage
+        });
 
         addLog('🎯 Seleccionada: ' + opcion.texto + (hasAdvantage ? ' (ventaja)' : '') + ' — Tira dado o resultado manual');
     }

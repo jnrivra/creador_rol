@@ -561,27 +561,84 @@
 
         .player-team-member {
             background: rgba(255,255,255,0.06);
-            border-radius: 8px;
-            padding: 0.6rem;
-            margin-bottom: 0.6rem;
+            border-radius: 10px;
+            padding: 0.7rem;
+            margin-bottom: 0.7rem;
+            border-left: 4px solid;
+            display: flex;
+            gap: 0.7rem;
+            align-items: flex-start;
         }
+
+        .ptm-avatar {
+            font-size: 2.8rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .ptm-info { flex: 1; }
 
         .ptm-name {
             font-size: 1rem;
-            font-weight: 700;
+            font-weight: 800;
             color: white;
+        }
+
+        .ptm-species {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
             margin-bottom: 0.3rem;
+        }
+
+        .ptm-level {
+            color: var(--gold);
+            font-weight: 700;
         }
 
         .ptm-tags {
             display: flex;
             flex-direction: column;
-            gap: 0.15rem;
+            gap: 0.12rem;
         }
 
         .ptm-tag {
-            font-size: 0.75rem;
-            color: rgba(255,255,255,0.6);
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.55);
+        }
+
+        /* === Roll Prompt === */
+        .roll-prompt {
+            text-align: center;
+            padding: 1.5rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .roll-prompt-emoji {
+            font-size: 5rem;
+            animation: bounce 1s ease-in-out infinite;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .roll-prompt-text {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--gold);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 0.5rem;
+        }
+
+        .roll-prompt-detail {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .roll-prompt-advantage {
+            font-size: 1rem;
+            color: #fbbf24;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            animation: pulse 2s ease-in-out infinite;
         }
 
         /* === Waiting for GM === */

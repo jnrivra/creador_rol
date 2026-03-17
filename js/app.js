@@ -182,6 +182,24 @@ window.Carrera.app = (function() {
             });
         }
 
+        // Die type selector
+        var selectedDie = 4;
+        document.querySelectorAll('.btn-die-type').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.btn-die-type').forEach(function(b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                selectedDie = parseInt(this.dataset.die, 10);
+                var input = document.getElementById('gm-roll-input');
+                var label = document.getElementById('gm-die-label');
+                if (input) {
+                    input.max = selectedDie;
+                    input.placeholder = '1-' + selectedDie;
+                    input.value = '';
+                }
+                if (label) label.textContent = 'd' + selectedDie + ':';
+            });
+        });
+
         // Resolve roll button (GM inputs number from kids' physical dice)
         var btnResolveRoll = document.getElementById('btn-resolve-roll');
         if (btnResolveRoll) {

@@ -87,6 +87,7 @@ window.Carrera.playerView = (function() {
             case 'ambient_change': handleAmbientChange(data); break;
             case 'team_show': handleTeamShow(data); break;
             case 'team_hide': handleTeamHide(); break;
+            case 'roll_prompt': handleRollPrompt(data); break;
         }
     }
 
@@ -98,15 +99,7 @@ window.Carrera.playerView = (function() {
                 '<span class="waiting-emoji">🐾</span>' +
                 '<div class="waiting-text">Esperando al Game Master...</div>' +
                 '<div class="waiting-sub">La aventura comenzará pronto</div>' +
-                '<button class="btn-activate-audio" id="btn-activate">🔊 Toca para activar sonido</button>' +
                 '</div>';
-
-            document.getElementById('btn-activate').addEventListener('click', function() {
-                activateAudio();
-                this.textContent = '✅ ¡Sonido activado!';
-                this.style.background = 'rgba(34, 197, 94, 0.3)';
-                this.style.animation = 'none';
-            });
         }
     }
 
@@ -287,6 +280,30 @@ window.Carrera.playerView = (function() {
         el.appendChild(waitEl);
     }
 
+    // === Roll Prompt (shown when GM needs kids to roll) ===
+    function handleRollPrompt(data) {
+        var diceArea = document.getElementById('player-dice-area');
+        if (!diceArea) return;
+
+        // Hide illustration
+        var illEl = document.querySelector('.scene-illustration');
+        if (illEl) illEl.style.display = 'none';
+
+        diceArea.innerHTML = '';
+        diceArea.className = 'dice-area active';
+
+        var prompt = document.createElement('div');
+        prompt.className = 'roll-prompt';
+        prompt.innerHTML =
+            '<div class="roll-prompt-emoji">🎲</div>' +
+            '<div class="roll-prompt-text">¡Tira los dados!</div>' +
+            '<div class="roll-prompt-detail">' + esc(data.emoji || '') + ' ' + esc(data.texto || '') + '</div>' +
+            (data.ventaja ? '<div class="roll-prompt-advantage">🎲🎲 ¡Con ventaja! Tira 2 y quédate con el mejor</div>' : '');
+
+        diceArea.appendChild(prompt);
+        safePlayEffect('suspense');
+    }
+
     // === Team Display (sidebar on player) ===
     function handleTeamShow(data) {
         // Remove existing
@@ -296,17 +313,20 @@ window.Carrera.playerView = (function() {
         panel.id = 'player-team-panel';
         panel.className = 'player-team-panel';
 
-        var html = '<div class="player-team-header">⚔️ Equipo</div>';
+        var html = '<div class="player-team-header">⚔️ Equipo de Aventura</div>';
         if (data.team) {
             data.team.forEach(function(p) {
-                html += '<div class="player-team-member" style="border-left: 3px solid ' + (p.color || '#f4a261') + ';">';
-                html += '<div class="ptm-name">' + esc(p.emoji) + ' ' + esc(p.nombre) + '</div>';
+                html += '<div class="player-team-member" style="border-color: ' + (p.color || '#f4a261') + ';">';
+                html += '<div class="ptm-avatar">' + esc(p.emoji) + '</div>';
+                html += '<div class="ptm-info">';
+                html += '<div class="ptm-name">' + esc(p.nombre) + '</div>';
+                html += '<div class="ptm-species">' + esc(p.especie) + ' · <span class="ptm-level">Nivel 1</span></div>';
                 html += '<div class="ptm-tags">';
                 html += '<span class="ptm-tag">⚡ ' + esc(p.habilidad) + '</span>';
                 html += '<span class="ptm-tag">🔧 ' + esc(p.herramienta) + '</span>';
                 html += '<span class="ptm-tag">✨ ' + esc(p.talento) + '</span>';
                 html += '<span class="ptm-tag">🐾 ' + esc(p.rasgo) + '</span>';
-                html += '</div></div>';
+                html += '</div></div></div>';
             });
         }
 
