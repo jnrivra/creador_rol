@@ -70,18 +70,17 @@ window.Carrera.adventure = (function() {
 
         sendStatusUpdate();
 
-        // Auto-send narrative at 400ms, then choices 5s after typing ends
+        // Auto-send narrative, then choices 3s after typing ends
         var narrativeLen = (scene.narrativa || '').length;
-        var typingDuration = narrativeLen * 18;
+        var typingMs = narrativeLen * 18;
 
         setTimeout(function() {
             sendNarrativeToPlayer();
 
-            // Chain: choices arrive 5s after narrative finishes typing
             if (scene.opciones && scene.opciones.length > 0) {
                 setTimeout(function() {
                     sendChoicesToPlayer(scene);
-                }, typingDuration + 5000);
+                }, typingMs + 3000);
             }
         }, 400);
 
@@ -115,7 +114,7 @@ window.Carrera.adventure = (function() {
         sendStatusUpdate();
 
         var narrativeLen = (scene.narrativa || '').length;
-        var typingDuration = narrativeLen * 18;
+        var typingMs = narrativeLen * 18;
 
         setTimeout(function() {
             sendNarrativeToPlayer();
@@ -123,7 +122,7 @@ window.Carrera.adventure = (function() {
             if (scene.opciones && scene.opciones.length > 0) {
                 setTimeout(function() {
                     sendChoicesToPlayer(scene);
-                }, typingDuration + 5000);
+                }, typingMs + 3000);
             }
         }, 400);
 
