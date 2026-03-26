@@ -695,6 +695,10 @@
         overflow-y: auto;
     }
 
+    /* On mobile: Options first, Dice second, everything else after */
+    .gm-card-options { order: -2 !important; }
+    .gm-card-dice { order: -1 !important; }
+
     .gm-header {
         flex-direction: column;
         align-items: flex-start;
@@ -705,4 +709,36 @@
         flex-direction: column;
         align-items: flex-start;
     }
+}
+
+/* === Inline Dice Resolver === */
+.gm-inline-dice {
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    padding: 1rem;
+    animation: popIn 0.3s ease-out;
+}
+
+/* Active SFX button indicator */
+.btn-sfx-active {
+    background: rgba(244, 162, 97, 0.3) !important;
+    box-shadow: 0 0 8px rgba(244, 162, 97, 0.4);
+    position: relative;
+}
+.btn-sfx-active::after {
+    content: '🔊';
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 0.55rem;
+}
+
+.gm-dice-header {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
 }

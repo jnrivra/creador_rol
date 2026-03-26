@@ -27,20 +27,43 @@
         <div class="title-sun"></div>
 
         <div class="title-container">
-            <span class="title-emoji">🐆🐈‍⬛</span>
+            <span class="title-emoji"><img src="assets/characters/guepardo.png" onerror="this.replaceWith(document.createTextNode('🐆'))"><img src="assets/characters/pantera.png" onerror="this.replaceWith(document.createTextNode('🐈‍⬛'))"></span>
             <h1 class="title-main">¡A la Carrera!</h1>
-            <p class="title-sub">La Búsqueda del Tesoro de los Titanes</p>
+            <p class="title-sub">Aventuras en el Bosque de Bristley</p>
             <p class="title-desc">Una aventura de rol para pequeños exploradores</p>
             <button id="btn-start" class="btn-primary">🌟 ¡Comenzar Aventura!</button>
         </div>
 
         <div class="title-creatures">
-            <span>🦊</span>
-            <span>🦉</span>
-            <span>🐰</span>
+            <span><img src="assets/characters/zorro.png" style="width:55px;height:55px;border-radius:50%;object-fit:cover;" onerror="this.replaceWith(document.createTextNode('🦊'))"></span>
+            <span><img src="assets/characters/buho.png" style="width:55px;height:55px;border-radius:50%;object-fit:cover;" onerror="this.replaceWith(document.createTextNode('🦉'))"></span>
+            <span><img src="assets/characters/conejo.png" style="width:55px;height:55px;border-radius:50%;object-fit:cover;" onerror="this.replaceWith(document.createTextNode('🐰'))"></span>
             <span>🦦</span>
             <span>🦔</span>
             <span>🐿️</span>
+        </div>
+    </section>
+
+    <!-- ====== PANTALLA DE CAMPAÑAS ====== -->
+    <section id="screen-campaigns" class="screen">
+        <div class="content-wrapper">
+            <h2 class="section-title">🗺️ Tus Campañas 🗺️</h2>
+            <div id="campaign-list" class="campaign-list"></div>
+            <div class="campaign-actions">
+                <button id="btn-new-campaign" class="btn-primary">✨ Nueva Campaña</button>
+                <button id="btn-quick-play" class="btn-secondary">⚡ Partida Rápida (sin guardar)</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== PANTALLA DE SELECCIÓN DE AVENTURA ====== -->
+    <section id="screen-adventure-select" class="screen">
+        <div class="content-wrapper">
+            <h2 class="section-title">⚔️ Elige tu Aventura ⚔️</h2>
+            <div id="adventure-select-list" class="adventure-select-list"></div>
+            <div style="margin-top:1rem;">
+                <button id="btn-back-campaigns" class="btn-secondary">← Volver a Campañas</button>
+            </div>
         </div>
     </section>
 
@@ -162,54 +185,19 @@
                     </div>
 
                     <!-- Scene Options -->
-                    <div class="gm-card">
-                        <div class="gm-card-title">🎯 Opciones de la Escena</div>
+                    <div class="gm-card gm-card-options">
+                        <div class="gm-card-title" style="justify-content:space-between;">
+                            <span>🎯 Opciones de la Escena</span>
+                            <button id="btn-send-choices-player" class="btn-gm-action btn-send-choices" style="font-size:0.65rem;">📺 Enviar opciones</button>
+                        </div>
                         <div id="gm-options"></div>
                     </div>
 
-                    <!-- Dice Input -->
+                    <!-- Dice History (dice input is now inline in options panel) -->
                     <div class="gm-card">
-                        <div class="gm-card-title">🎲 Dados de los Niños</div>
+                        <div class="gm-card-title">🎲 Historial de Dados</div>
                         <div id="gm-last-roll"></div>
-                        <div class="gm-dice-selector">
-                            <button class="btn-die-type active" data-die="4" title="d4">
-                                <svg viewBox="0 0 40 40" width="32" height="32"><polygon points="20,4 36,34 4,34" fill="none" stroke="currentColor" stroke-width="2.5"/><text x="20" y="27" text-anchor="middle" font-size="11" fill="currentColor" font-weight="bold">4</text></svg>
-                            </button>
-                            <button class="btn-die-type" data-die="6" title="d6">
-                                <svg viewBox="0 0 40 40" width="32" height="32"><rect x="5" y="5" width="30" height="30" rx="4" fill="none" stroke="currentColor" stroke-width="2.5"/><text x="20" y="26" text-anchor="middle" font-size="12" fill="currentColor" font-weight="bold">6</text></svg>
-                            </button>
-                            <button class="btn-die-type" data-die="8" title="d8">
-                                <svg viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 38,20 20,38 2,20" fill="none" stroke="currentColor" stroke-width="2.5"/><text x="20" y="26" text-anchor="middle" font-size="12" fill="currentColor" font-weight="bold">8</text></svg>
-                            </button>
-                            <button class="btn-die-type" data-die="10" title="d10">
-                                <svg viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 36,15 32,36 8,36 4,15" fill="none" stroke="currentColor" stroke-width="2.5"/><text x="20" y="26" text-anchor="middle" font-size="10" fill="currentColor" font-weight="bold">10</text></svg>
-                            </button>
-                            <button class="btn-die-type" data-die="12" title="d12">
-                                <svg viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 34,10 38,26 28,38 12,38 2,26 6,10" fill="none" stroke="currentColor" stroke-width="2.5"/><text x="20" y="26" text-anchor="middle" font-size="10" fill="currentColor" font-weight="bold">12</text></svg>
-                            </button>
-                            <button class="btn-die-type" data-die="20" title="d20">
-                                <svg viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 36,12 36,28 20,38 4,28 4,12" fill="none" stroke="currentColor" stroke-width="2.5"/><text x="20" y="26" text-anchor="middle" font-size="10" fill="currentColor" font-weight="bold">20</text></svg>
-                            </button>
-                            <button class="btn-die-type" data-die="100" title="d100">
-                                <svg viewBox="0 0 40 40" width="32" height="32"><circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.5"/><text x="20" y="25" text-anchor="middle" font-size="9" fill="currentColor" font-weight="bold">%</text></svg>
-                            </button>
-                        </div>
-                        <div class="gm-dice-input-row">
-                            <span id="gm-die-label" style="color:rgba(255,255,255,0.6);font-size:0.85rem;font-weight:700;">d4:</span>
-                            <input type="number" id="gm-roll-input" class="gm-roll-input" min="1" max="4" placeholder="1-4">
-                            <label class="gm-advantage-check">
-                                <input type="checkbox" id="gm-advantage-check"> Ventaja
-                            </label>
-                            <button id="btn-resolve-roll" class="btn-roll-dice">✅ Resolver</button>
-                        </div>
-                        <div class="gm-manual-results" style="margin-top:0.5rem;">
-                            <span style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-right:0.3rem;">Forzar:</span>
-                            <button class="btn-manual-result btn-manual-critico" data-result="critico">⭐ Crítico</button>
-                            <button class="btn-manual-result btn-manual-exito" data-result="exito">✅ Éxito</button>
-                            <button class="btn-manual-result btn-manual-complicacion" data-result="complicacion">⚠️ Complicación</button>
-                            <button class="btn-manual-result btn-manual-juerga" data-result="juerga">🎪 Juerga</button>
-                        </div>
-                        <div id="gm-dice-history" class="gm-dice-history" style="margin-top:0.5rem;"></div>
+                        <div id="gm-dice-history" class="gm-dice-history"></div>
                     </div>
 
                     <!-- Navigation -->
@@ -217,12 +205,7 @@
                         <div class="gm-card-title">🧭 Navegación</div>
                         <div class="gm-nav-row">
                             <select id="gm-scene-select" class="gm-scene-select">
-                                <option value="scene1">1 - El Mapa Misterioso</option>
-                                <option value="scene2">2 - El Río Rugiente</option>
-                                <option value="scene3">3 - El Túnel de los Susurros</option>
-                                <option value="scene4">4 - La Guarida del Tejón</option>
-                                <option value="scene5">5 - El Tesoro de los Titanes</option>
-                                <option value="victoria">🏆 Victoria</option>
+                                <!-- Populated dynamically by adventure -->
                             </select>
                             <button id="btn-go-scene" class="btn-go-scene">Ir →</button>
                         </div>
@@ -236,7 +219,7 @@
                             <button class="btn-quick" id="btn-quick-triumph">🎺 Fanfarria</button>
                             <button class="btn-quick" id="btn-quick-success">✅ Éxito SFX</button>
                             <button class="btn-quick" id="btn-quick-failure">⚠️ Fallo SFX</button>
-                            <button class="btn-quick" id="btn-quick-hijinx">🎪 Juerga SFX</button>
+                            <button class="btn-quick" id="btn-quick-hijinx">🎪 ¡Oh No! SFX</button>
                             <button class="btn-quick" id="btn-quick-critical">⭐ Crítico SFX</button>
                             <button class="btn-quick" id="btn-quick-transition">🎵 Transición</button>
                             <button class="btn-quick" id="btn-quick-suspense">😨 Suspenso</button>
@@ -251,9 +234,9 @@
                         </div>
                     </div>
 
-                    <!-- Juergas Library -->
+                    <!-- Oh No Library -->
                     <div class="gm-card">
-                        <div class="gm-card-title">🎪 Biblioteca de Juergas</div>
+                        <div class="gm-card-title">🎪 Biblioteca de ¡Oh No!</div>
                         <div id="gm-juergas" class="gm-quick-actions"></div>
                     </div>
 
@@ -278,7 +261,7 @@
                     </div>
                 </div>
                 <div class="gm-shortcuts">
-                    <kbd>Espacio</kbd> Input dado &nbsp; <kbd>N</kbd> Narrativa &nbsp; <kbd>C</kbd> Opciones &nbsp; <kbd>R</kbd> Reenviar &nbsp; <kbd>M</kbd> Mute &nbsp; <kbd>1</kbd>-<kbd>5</kbd> Escena
+                    <kbd>Espacio</kbd> Dado &nbsp; <kbd>N</kbd> Narrativa &nbsp; <kbd>C</kbd> Opciones &nbsp; <kbd>R</kbd> Reenviar &nbsp; <kbd>M</kbd> Mute &nbsp; <kbd>1</kbd>-<kbd>5</kbd> Escena
                 </div>
             </div>
         </div>
@@ -289,12 +272,23 @@
 
     <!-- Scripts -->
     <script src="js/data/bestiary.js"></script>
-    <script src="js/data/scenes.js"></script>
+    <script src="js/data/badges-definitions.js"></script>
+    <script src="js/data/items.js"></script>
+    <script src="js/data/random-events.js"></script>
+    <script src="js/data/adventures/adventure-registry.js"></script>
+    <script src="js/data/adventures/tesoro-titanes.js"></script>
+    <script src="js/data/adventures/bosque-sombras.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/dice.js"></script>
     <script src="js/clock.js"></script>
+    <script src="js/save.js"></script>
+    <script src="js/progression.js"></script>
+    <script src="js/badges.js"></script>
+    <script src="js/loot.js"></script>
     <script src="js/characters.js"></script>
     <script src="js/sync.js"></script>
+    <script src="js/resolution-generator.js"></script>
+    <script src="js/campaign-ui.js"></script>
     <script src="js/adventure.js"></script>
     <script src="js/app.js"></script>
 </body>

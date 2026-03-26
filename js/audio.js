@@ -7,6 +7,7 @@ window.Carrera.audio = (function() {
     var ambientGain = null;
     var sfxGain = null;
     var currentAmbientNodes = [];
+    var activeSfx = {}; // track active SFX by name for toggle
     var initialized = false;
     var muted = false;
 
@@ -542,6 +543,39 @@ window.Carrera.audio = (function() {
         playNote(220, now + 0.75, 0.3, 0.08, 'triangle');
     }
 
+    // === SFX Toggle (stop if playing, play if not) ===
+    function stopSfx(name) {
+        if (activeSfx[name]) {
+            clearTimeout(activeSfx[name]);
+            activeSfx[name] = null;
+            // Rapid fade out the SFX gain to kill all playing SFX
+            if (sfxGain) {
+                sfxGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
+                setTimeout(function() {
+                    if (sfxGain) sfxGain.gain.value = 0.5; // restore
+                }, 80);
+            }
+            return true; // was playing, now stopped
+        }
+        return false; // wasn't playing
+    }
+
+    function trackSfx(name, durationMs) {
+        // Clear any previous timer for this sfx
+        if (activeSfx[name]) clearTimeout(activeSfx[name]);
+        activeSfx[name] = setTimeout(function() {
+            activeSfx[name] = null;
+        }, durationMs);
+    }
+
+    // Toggle: returns true if started playing, false if stopped
+    function toggleSfx(name, playFn, durationMs) {
+        if (stopSfx(name)) return false;
+        playFn();
+        trackSfx(name, durationMs || 2000);
+        return true;
+    }
+
     // Volume controls
     function setAmbientVolume(v) { if (ambientGain) ambientGain.gain.value = Math.max(0, Math.min(1, v)); }
     function setSfxVolume(v) { if (sfxGain) sfxGain.gain.value = Math.max(0, Math.min(1, v)); }
@@ -558,6 +592,7 @@ window.Carrera.audio = (function() {
         playClockAlarm: playClockAlarm,
         playSceneTransition: playSceneTransition, playSuspense: playSuspense,
         setAmbientVolume: setAmbientVolume, setSfxVolume: setSfxVolume,
-        toggleMute: toggleMute, isMuted: isMuted
+        toggleMute: toggleMute, isMuted: isMuted,
+        toggleSfx: toggleSfx
     };
 })();

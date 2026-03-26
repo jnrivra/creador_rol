@@ -288,3 +288,35 @@
 #scene-choices {
     transition: opacity 0.5s ease;
 }
+
+/* === Cinematic scene fade through black === */
+@keyframes sceneFadeThrough {
+    0% { opacity: 0; }
+    40% { opacity: 1; }
+    60% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* === Particle float fallback (CSS) === */
+@keyframes particleFloat {
+    0% {
+        opacity: 0;
+        transform: translateY(0) translateX(0);
+    }
+    20% {
+        opacity: 0.6;
+    }
+    80% {
+        opacity: 0.4;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-100px) translateX(30px);
+    }
+}
+
+/* === Portrait pulse for cinematic mode === */
+@keyframes portraitGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(244, 162, 97, 0.3); }
+    50% { box-shadow: 0 0 20px rgba(244, 162, 97, 0.6); }
+}

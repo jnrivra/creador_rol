@@ -4,11 +4,21 @@ window.Carrera = window.Carrera || {};
 
 window.Carrera.dice = (function() {
     var state = {
-        difficultyBonus: 0 // Increases when clock fills
+        difficultyBonus: 0, // Increases when clock fills
+        currentDieType: 4   // Physical die type selected by GM
     };
 
     function reset() {
         state.difficultyBonus = 0;
+        state.currentDieType = 4;
+    }
+
+    function setCurrentDie(type) {
+        state.currentDieType = type;
+    }
+
+    function getCurrentDie() {
+        return state.currentDieType;
     }
 
     function addDifficultyBonus(amount) {
@@ -49,7 +59,7 @@ window.Carrera.dice = (function() {
             critico: { texto: '¡CRÍTICO!', emoji: '⭐', clase: 'result-critico' },
             exito: { texto: '¡ÉXITO!', emoji: '✅', clase: 'result-exito' },
             complicacion: { texto: 'COMPLICACIÓN', emoji: '⚠️', clase: 'result-complicacion' },
-            juerga: { texto: '¡JUERGA!', emoji: '🎪', clase: 'result-juerga' }
+            juerga: { texto: '¡OH NO!', emoji: '🎪', clase: 'result-juerga' }
         };
         return labels[tipo] || labels.complicacion;
     }
@@ -70,7 +80,7 @@ window.Carrera.dice = (function() {
 
         var dieEl = document.createElement('div');
         dieEl.className = 'die rolling';
-        dieEl.innerHTML = '<span class="die-label">Tirada</span><span class="die-value">?</span>';
+        dieEl.innerHTML = '<span class="die-label">d' + state.currentDieType + '</span><span class="die-value">?</span>';
         container.appendChild(dieEl);
 
         if (rollData.ventaja) {
@@ -84,7 +94,7 @@ window.Carrera.dice = (function() {
 
         var count = 0;
         var interval = setInterval(function() {
-            dieEl.querySelector('.die-value').textContent = Math.floor(Math.random() * 20) + 1;
+            dieEl.querySelector('.die-value').textContent = Math.floor(Math.random() * state.currentDieType) + 1;
             count++;
             if (count > 12) {
                 clearInterval(interval);
@@ -108,6 +118,20 @@ window.Carrera.dice = (function() {
             resultEl.innerHTML = '<span class="result-emoji">' + label.emoji + '</span> <span class="result-text">' + label.texto + '</span>';
             container.appendChild(resultEl);
 
+            // Color flash on result
+            var flashColors = {
+                critico: 'rgba(234,179,8,0.2)', exito: 'rgba(34,197,94,0.15)',
+                complicacion: 'rgba(249,115,22,0.15)', juerga: 'rgba(168,85,247,0.15)'
+            };
+            var flashColor = flashColors[rollData.tipo];
+            if (flashColor) {
+                container.style.transition = 'background 0.3s';
+                container.style.background = flashColor;
+                setTimeout(function() {
+                    container.style.background = '';
+                }, 800);
+            }
+
             setTimeout(function() {
                 if (rollData.tipo === 'critico') window.Carrera.audio.playCritical();
                 else if (rollData.tipo === 'exito') window.Carrera.audio.playSuccess();
@@ -128,6 +152,8 @@ window.Carrera.dice = (function() {
         getDifficultyLabel: getDifficultyLabel,
         getDifficultyBonus: getDifficultyBonus,
         addDifficultyBonus: addDifficultyBonus,
+        setCurrentDie: setCurrentDie,
+        getCurrentDie: getCurrentDie,
         animateRollPredetermined: animateRollPredetermined
     };
 })();

@@ -3,6 +3,7 @@ window.Carrera = window.Carrera || {};
 
 window.Carrera.app = (function() {
     var currentScreen = 'title';
+    var quickPlayMode = false; // true = no save, like the old flow
 
     function init() {
         // Init sync as GM
@@ -11,14 +12,42 @@ window.Carrera.app = (function() {
         // Set clock render targets to GM IDs
         window.Carrera.clock.setRenderTargets('gm-clock-display', 'gm-die-display');
 
-        // Title screen button
+        // Title screen → Campaigns
         var btnStart = document.getElementById('btn-start');
         if (btnStart) {
             btnStart.addEventListener('click', function() {
                 window.Carrera.audio.init();
                 window.Carrera.audio.resume();
                 window.Carrera.audio.playClick();
+                showScreen('campaigns');
+            });
+        }
+
+        // === Campaign Screen ===
+        var btnNewCampaign = document.getElementById('btn-new-campaign');
+        if (btnNewCampaign) {
+            btnNewCampaign.addEventListener('click', function() {
+                window.Carrera.audio.playClick();
+                quickPlayMode = false;
                 showScreen('characters');
+            });
+        }
+
+        var btnQuickPlay = document.getElementById('btn-quick-play');
+        if (btnQuickPlay) {
+            btnQuickPlay.addEventListener('click', function() {
+                window.Carrera.audio.playClick();
+                quickPlayMode = true;
+                showScreen('characters');
+            });
+        }
+
+        // === Adventure Select Screen ===
+        var btnBackCampaigns = document.getElementById('btn-back-campaigns');
+        if (btnBackCampaigns) {
+            btnBackCampaigns.addEventListener('click', function() {
+                window.Carrera.audio.playClick();
+                showScreen('campaigns');
             });
         }
 
@@ -28,12 +57,14 @@ window.Carrera.app = (function() {
         window.Carrera.characters.initSlotClickHandlers();
         window.Carrera.characters.updateStartButton();
 
-        // Start adventure button
+        // Start adventure button (from character screen → team review)
         var btnAdventure = document.getElementById('btn-start-adventure');
         if (btnAdventure) {
             btnAdventure.addEventListener('click', function() {
                 window.Carrera.audio.playClick();
                 window.Carrera.characters.renderTeamSummary('team-summary');
+                // Send full team data to player view
+                window.Carrera.characters.syncTeamConfirmed();
                 showScreen('team');
             });
         }
@@ -43,9 +74,26 @@ window.Carrera.app = (function() {
         if (btnConfirm) {
             btnConfirm.addEventListener('click', function() {
                 window.Carrera.audio.playClick();
-                showScreen('scene');
-                initGMDashboard();
-                window.Carrera.adventure.start();
+
+                if (quickPlayMode) {
+                    // Old flow: direct to scene with default adventure
+                    showScreen('scene');
+                    initGMDashboard();
+                    window.Carrera.adventure.start();
+                } else {
+                    // Campaign flow: create campaign, then adventure select
+                    var team = window.Carrera.characters.getTeam();
+                    var nombre = team.map(function(p) { return p.nombre; }).join(' y ');
+                    nombre = 'Aventura de ' + nombre;
+
+                    var campaign = window.Carrera.save.createCampaign(nombre, team);
+                    if (campaign) {
+                        window.Carrera.campaignUI.setActiveCampaign(campaign);
+                        showScreen('adventure-select');
+                    } else {
+                        alert('Maximo 5 campañas. Borra una primero.');
+                    }
+                }
             });
         }
 
@@ -58,16 +106,24 @@ window.Carrera.app = (function() {
             });
         }
 
-        // Handle player reconnection (only resend ONCE per connection)
+        // Handle player reconnection (resend once per connection, reset on disconnect)
         var playerSynced = false;
         window.Carrera.sync.onMessage(function(msg) {
-            if (msg.type === 'player_ready' && !playerSynced && window.Carrera.adventure.getState().currentSceneId) {
-                playerSynced = true;
-                setTimeout(function() {
-                    window.Carrera.adventure.resendCurrentState();
-                }, 300);
+            if (msg.type === 'player_ready') {
+                if (!playerSynced && window.Carrera.adventure.getState().currentSceneId) {
+                    playerSynced = true;
+                    setTimeout(function() {
+                        window.Carrera.adventure.resendCurrentState();
+                    }, 300);
+                }
             }
         });
+        // Reset flag when player disconnects so reconnection works
+        setInterval(function() {
+            if (playerSynced && !window.Carrera.sync.isPlayerConnected()) {
+                playerSynced = false;
+            }
+        }, 3000);
 
         // --- GM Dashboard Controls ---
 
@@ -85,7 +141,6 @@ window.Carrera.app = (function() {
             btnOpenPlayer.addEventListener('click', function() {
                 var playerWin = window.open('player.html', 'carrera-player', 'width=1280,height=720');
                 if (playerWin) {
-                    // Store window reference for direct postMessage communication
                     window.Carrera.sync.setPlayerWindow(playerWin);
                 }
                 window.Carrera.adventure.addLog('Vista de jugadores abierta');
@@ -97,19 +152,35 @@ window.Carrera.app = (function() {
         if (btnShowTeam) {
             btnShowTeam.addEventListener('click', function() {
                 var team = window.Carrera.characters.getTeam();
+                var campaign = window.Carrera.campaignUI.getActiveCampaign();
                 var teamData = team.map(function(p) {
+                    var cp = campaign ? findCampaignPlayer(campaign, p.id) : null;
                     return {
-                        emoji: p.emoji, nombre: p.nombre, especie: p.especie,
+                        id: p.id, emoji: p.emoji, nombre: p.nombre, especie: p.especie,
                         habilidad: p.habilidad.nombre, herramienta: p.herramienta.nombre,
-                        talento: p.talento.nombre, rasgo: p.rasgo.nombre, color: p.color
+                        talento: p.talento.nombre, rasgo: p.rasgo.nombre, color: p.color,
+                        level: cp ? cp.level : 1,
+                        xp: cp ? cp.xp : 0,
+                        titulo: cp ? window.Carrera.progression.getLevelForXP(cp.xp || 0).titulo : 'Explorador Novato',
+                        inventory: cp ? (cp.inventory || []) : []
                     };
                 });
                 window.Carrera.sync.send('team_show', { team: teamData });
                 window.Carrera.adventure.addLog('📺 Equipo mostrado en pantalla');
-                // Flash
                 var orig = btnShowTeam.textContent;
                 btnShowTeam.textContent = '✅';
                 setTimeout(function() { btnShowTeam.textContent = orig; }, 1000);
+            });
+        }
+
+        // Send choices to player screen
+        var btnSendChoices = document.getElementById('btn-send-choices-player');
+        if (btnSendChoices) {
+            btnSendChoices.addEventListener('click', function() {
+                window.Carrera.adventure.sendChoicesToPlayer();
+                var orig = btnSendChoices.textContent;
+                btnSendChoices.textContent = '✅ Enviadas';
+                setTimeout(function() { btnSendChoices.textContent = orig; }, 1500);
             });
         }
 
@@ -118,7 +189,6 @@ window.Carrera.app = (function() {
         if (btnSendNarrative) {
             btnSendNarrative.addEventListener('click', function() {
                 window.Carrera.adventure.sendNarrativeToPlayer();
-                // Flash confirmation
                 var origText = btnSendNarrative.textContent;
                 btnSendNarrative.textContent = '✅ Enviado';
                 btnSendNarrative.style.background = 'rgba(34, 197, 94, 0.3)';
@@ -138,7 +208,6 @@ window.Carrera.app = (function() {
                     window.Carrera.sync.send('custom_text', { text: textarea.value.trim() });
                     window.Carrera.adventure.addLog('✏️ Texto enviado: ' + textarea.value.trim().substring(0, 40));
                     textarea.value = '';
-                    // Flash
                     var origText = btnSendCustom.textContent;
                     btnSendCustom.textContent = '✅ Enviado';
                     btnSendCustom.style.background = 'rgba(34, 197, 94, 0.3)';
@@ -182,50 +251,6 @@ window.Carrera.app = (function() {
             });
         }
 
-        // Die type selector
-        var selectedDie = 4;
-        document.querySelectorAll('.btn-die-type').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.btn-die-type').forEach(function(b) { b.classList.remove('active'); });
-                this.classList.add('active');
-                selectedDie = parseInt(this.dataset.die, 10);
-                var input = document.getElementById('gm-roll-input');
-                var label = document.getElementById('gm-die-label');
-                if (input) {
-                    input.max = selectedDie;
-                    input.placeholder = '1-' + selectedDie;
-                    input.value = '';
-                }
-                if (label) label.textContent = 'd' + selectedDie + ':';
-            });
-        });
-
-        // Resolve roll button (GM inputs number from kids' physical dice)
-        var btnResolveRoll = document.getElementById('btn-resolve-roll');
-        if (btnResolveRoll) {
-            btnResolveRoll.addEventListener('click', function() {
-                window.Carrera.adventure.gmResolveRoll();
-            });
-        }
-
-        // Enter key on roll input also resolves
-        var rollInput = document.getElementById('gm-roll-input');
-        if (rollInput) {
-            rollInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    window.Carrera.adventure.gmResolveRoll();
-                }
-            });
-        }
-
-        // Manual result buttons
-        document.querySelectorAll('.btn-manual-result').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var result = this.dataset.result;
-                window.Carrera.adventure.gmManualResolve(result);
-            });
-        });
-
         // Scene navigation
         var btnGoScene = document.getElementById('btn-go-scene');
         if (btnGoScene) {
@@ -237,48 +262,43 @@ window.Carrera.app = (function() {
             });
         }
 
-        // Quick actions
-        var quickActions = {
-            'btn-quick-confetti': function() {
-                window.Carrera.sync.send('confetti', {});
-                window.Carrera.adventure.addLog('🎉 Confetti enviado');
-            },
-            'btn-quick-triumph': function() {
-                window.Carrera.sync.send('effect_play', { effect: 'triumph' });
-                window.Carrera.adventure.addLog('🎺 Fanfarria enviada');
-            },
-            'btn-quick-success': function() {
-                window.Carrera.sync.send('effect_play', { effect: 'success' });
-                window.Carrera.adventure.addLog('✅ SFX éxito enviado');
-            },
-            'btn-quick-failure': function() {
-                window.Carrera.sync.send('effect_play', { effect: 'failure' });
-                window.Carrera.adventure.addLog('⚠️ SFX fallo enviado');
-            },
-            'btn-quick-hijinx': function() {
-                window.Carrera.sync.send('effect_play', { effect: 'hijinx' });
-                window.Carrera.adventure.addLog('🎪 SFX juerga enviado');
-            },
-            'btn-quick-critical': function() {
-                window.Carrera.sync.send('effect_play', { effect: 'critical' });
-                window.Carrera.adventure.addLog('⭐ SFX crítico enviado');
-            },
-            'btn-quick-transition': function() {
-                window.Carrera.audio.playSceneTransition();
-                window.Carrera.sync.send('effect_play', { effect: 'scene_transition' });
-                window.Carrera.adventure.addLog('🎵 Transición enviada');
-            },
-            'btn-quick-suspense': function() {
-                window.Carrera.audio.playSuspense();
-                window.Carrera.sync.send('effect_play', { effect: 'suspense' });
-                window.Carrera.adventure.addLog('😨 Suspenso enviado');
-            }
+        // Quick actions — SFX toggle: click to play, click again to stop
+        var sfxButtons = {
+            'btn-quick-triumph':    { effect: 'triumph',          fn: window.Carrera.audio.playTriumph,          dur: 2800, log: '🎺 Fanfarria' },
+            'btn-quick-success':    { effect: 'success',          fn: window.Carrera.audio.playSuccess,          dur: 1000, log: '✅ Éxito SFX' },
+            'btn-quick-failure':    { effect: 'failure',          fn: window.Carrera.audio.playFailure,          dur: 1200, log: '⚠️ Fallo SFX' },
+            'btn-quick-hijinx':     { effect: 'hijinx',           fn: window.Carrera.audio.playHijinx,           dur: 1200, log: '🎪 ¡Oh No! SFX' },
+            'btn-quick-critical':   { effect: 'critical',         fn: window.Carrera.audio.playCritical,         dur: 1500, log: '⭐ Crítico SFX' },
+            'btn-quick-transition': { effect: 'scene_transition', fn: window.Carrera.audio.playSceneTransition,  dur: 800,  log: '🎵 Transición' },
+            'btn-quick-suspense':   { effect: 'suspense',         fn: window.Carrera.audio.playSuspense,         dur: 1500, log: '😨 Suspenso' }
         };
 
-        Object.keys(quickActions).forEach(function(id) {
+        Object.keys(sfxButtons).forEach(function(id) {
             var btn = document.getElementById(id);
-            if (btn) btn.addEventListener('click', quickActions[id]);
+            if (!btn) return;
+            var cfg = sfxButtons[id];
+            btn.addEventListener('click', function() {
+                var playing = window.Carrera.audio.toggleSfx(cfg.effect, cfg.fn, cfg.dur);
+                if (playing) {
+                    window.Carrera.sync.send('effect_play', { effect: cfg.effect });
+                    window.Carrera.adventure.addLog(cfg.log + ' enviado');
+                    btn.classList.add('btn-sfx-active');
+                    setTimeout(function() { btn.classList.remove('btn-sfx-active'); }, cfg.dur);
+                } else {
+                    window.Carrera.adventure.addLog(cfg.log + ' detenido');
+                    btn.classList.remove('btn-sfx-active');
+                }
+            });
         });
+
+        // Confetti (not toggleable, just fires)
+        var btnConfetti = document.getElementById('btn-quick-confetti');
+        if (btnConfetti) {
+            btnConfetti.addEventListener('click', function() {
+                window.Carrera.sync.send('confetti', {});
+                window.Carrera.adventure.addLog('🎉 Confetti enviado');
+            });
+        }
 
         // Ambient buttons
         document.querySelectorAll('.btn-ambient').forEach(function(btn) {
@@ -323,8 +343,6 @@ window.Carrera.app = (function() {
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
             if (currentScreen !== 'scene') return;
-
-            // Don't trigger shortcuts when typing in textarea
             if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
 
             if (e.key === 'm' || e.key === 'M') {
@@ -336,22 +354,13 @@ window.Carrera.app = (function() {
 
             if (e.key === ' ') {
                 e.preventDefault();
-                // Focus the roll input
-                var ri = document.getElementById('gm-roll-input');
+                var ri = document.getElementById('gm-inline-roll-input');
                 if (ri) ri.focus();
             }
 
-            if (e.key === 'n' || e.key === 'N') {
-                window.Carrera.adventure.sendNarrativeToPlayer();
-            }
-
-            if (e.key === 'c' || e.key === 'C') {
-                window.Carrera.adventure.sendChoicesToPlayer();
-            }
-
-            if (e.key === 'r' || e.key === 'R') {
-                window.Carrera.adventure.resendCurrentState();
-            }
+            if (e.key === 'n' || e.key === 'N') window.Carrera.adventure.sendNarrativeToPlayer();
+            if (e.key === 'c' || e.key === 'C') window.Carrera.adventure.sendChoicesToPlayer();
+            if (e.key === 'r' || e.key === 'R') window.Carrera.adventure.resendCurrentState();
 
             if (e.key >= '1' && e.key <= '5') {
                 window.Carrera.adventure.loadScene('scene' + e.key);
@@ -362,11 +371,36 @@ window.Carrera.app = (function() {
     }
 
     function initGMDashboard() {
-        // Initialize juergas library
         window.Carrera.adventure.initJuergasLibrary();
-
-        // Initialize clock render
         window.Carrera.adventure.updateGMStatus();
+
+        // Update scene navigator based on current adventure scenes
+        updateSceneNavigator();
+    }
+
+    function updateSceneNavigator() {
+        var select = document.getElementById('gm-scene-select');
+        if (!select) return;
+        var scenes = window.Carrera.scenes;
+        if (!scenes) return;
+
+        select.innerHTML = '';
+        var keys = Object.keys(scenes);
+        keys.forEach(function(key) {
+            var scene = scenes[key];
+            var opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = (scene.emoji || '') + ' ' + (scene.titulo || key);
+            select.appendChild(opt);
+        });
+    }
+
+    function findCampaignPlayer(campaign, playerId) {
+        if (!campaign || !campaign.equipo) return null;
+        for (var i = 0; i < campaign.equipo.length; i++) {
+            if (campaign.equipo[i].id === playerId) return campaign.equipo[i];
+        }
+        return null;
     }
 
     function showScreen(screenId) {
@@ -391,6 +425,14 @@ window.Carrera.app = (function() {
             window.Carrera.characters.renderSlots();
         }
 
+        if (screenId === 'campaigns') {
+            window.Carrera.campaignUI.renderCampaignList('campaign-list');
+        }
+
+        if (screenId === 'adventure-select') {
+            window.Carrera.campaignUI.renderAdventureSelect('adventure-select-list');
+        }
+
         // Clean confetti
         var confetti = document.getElementById('confetti-container');
         if (confetti && screenId !== 'scene') {
@@ -399,9 +441,15 @@ window.Carrera.app = (function() {
         }
     }
 
+    function isQuickPlay() {
+        return quickPlayMode;
+    }
+
     document.addEventListener('DOMContentLoaded', init);
 
     return {
-        showScreen: showScreen
+        showScreen: showScreen,
+        initGMDashboard: initGMDashboard,
+        isQuickPlay: isQuickPlay
     };
 })();

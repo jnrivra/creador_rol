@@ -49,6 +49,28 @@ window.Carrera.characters = (function() {
         if (countEl) countEl.textContent = selectedPlayers.length + ' jugadores';
     }
 
+    // Helper: generate avatar HTML with AI portrait fallback to emoji
+    function avatarHtml(animal, size) {
+        var src = 'assets/characters/' + animal.id + '.png';
+        // Escape emoji for safe embedding inside onerror attribute string.
+        // Encode as Unicode escapes to avoid issues with ZWJ sequences,
+        // single quotes, backslashes, or any special characters.
+        var safeEmoji = '';
+        for (var ci = 0; ci < animal.emoji.length; ci++) {
+            safeEmoji += '\\u' + ('0000' + animal.emoji.charCodeAt(ci).toString(16)).slice(-4);
+        }
+        // Use <img> with onerror fallback — works on file:// protocol
+        return '<img src="' + src + '" alt="' + escHtml(animal.nombre) + '"' +
+            (size ? ' style="width:' + size + 'px;height:' + size + 'px;"' : '') +
+            ' onerror="this.replaceWith(document.createTextNode(\'' + safeEmoji + '\'))">';
+    }
+
+    // HTML-escape helper for attribute values
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function renderGrid(containerId) {
         var container = document.getElementById(containerId);
         if (!container) return;
@@ -67,7 +89,7 @@ window.Carrera.characters = (function() {
             if (isSelected) card.classList.add('selected');
 
             card.innerHTML =
-                '<div class="card-emoji">' + animal.emoji + '</div>' +
+                '<div class="card-emoji">' + avatarHtml(animal) + '</div>' +
                 '<div class="card-name">' + animal.nombre + '</div>' +
                 '<div class="card-species">' + animal.especie + '</div>' +
                 '<div class="card-desc">' + animal.descripcionCorta + '</div>' +
@@ -112,6 +134,45 @@ window.Carrera.characters = (function() {
             }
             updateSlotIndicator();
         }
+
+        // Sync selection to player view
+        syncSelectionToPlayer();
+    }
+
+    function syncSelectionToPlayer() {
+        if (!window.Carrera.sync) return;
+        var team = selectedPlayers
+            .filter(function(p) { return p !== null; })
+            .map(function(p) {
+                return {
+                    id: p.id, emoji: p.emoji, nombre: p.nombre, especie: p.especie,
+                    color: p.color, colorClaro: p.colorClaro,
+                    gremio: p.gremio, descripcionCorta: p.descripcionCorta,
+                    habilidad: { nombre: p.habilidad.nombre, descripcion: p.habilidad.descripcion },
+                    herramienta: { nombre: p.herramienta.nombre, descripcion: p.herramienta.descripcion },
+                    talento: { nombre: p.talento.nombre, descripcion: p.talento.descripcion },
+                    rasgo: { nombre: p.rasgo.nombre, descripcion: p.rasgo.descripcion }
+                };
+            });
+        window.Carrera.sync.send('character_selection', { team: team, total: selectedPlayers.length });
+    }
+
+    function syncTeamConfirmed() {
+        if (!window.Carrera.sync) return;
+        var team = selectedPlayers
+            .filter(function(p) { return p !== null; })
+            .map(function(p) {
+                return {
+                    id: p.id, emoji: p.emoji, nombre: p.nombre, especie: p.especie,
+                    color: p.color, colorClaro: p.colorClaro,
+                    gremio: p.gremio, descripcionCorta: p.descripcionCorta,
+                    habilidad: { nombre: p.habilidad.nombre, descripcion: p.habilidad.descripcion },
+                    herramienta: { nombre: p.herramienta.nombre, descripcion: p.herramienta.descripcion },
+                    talento: { nombre: p.talento.nombre, descripcion: p.talento.descripcion },
+                    rasgo: { nombre: p.rasgo.nombre, descripcion: p.rasgo.descripcion }
+                };
+            });
+        window.Carrera.sync.send('team_confirmed', { team: team });
     }
 
     function findNextEmptySlot(afterIndex) {
@@ -140,7 +201,7 @@ window.Carrera.characters = (function() {
                 slot.classList.add('has-character');
                 slot.innerHTML =
                     '<div class="slot-filled" style="--animal-color: ' + p.color + '">' +
-                    '<div class="slot-emoji">' + p.emoji + '</div>' +
+                    '<div class="slot-emoji">' + avatarHtml(p, 60) + '</div>' +
                     '<div class="slot-name">' + p.nombre + '</div>' +
                     '<div class="slot-species">' + p.especie + '</div>' +
                     '</div>';
@@ -228,7 +289,7 @@ window.Carrera.characters = (function() {
 
             card.innerHTML =
                 '<div class="team-card-header">' +
-                '<span class="team-emoji">' + player.emoji + '</span>' +
+                '<span class="team-emoji">' + avatarHtml(player, 64) + '</span>' +
                 '<div><h3>' + player.nombre + ' el ' + player.especie + '</h3>' +
                 '<p class="team-guild">' + player.gremio + '</p></div>' +
                 '</div>' +
@@ -245,6 +306,8 @@ window.Carrera.characters = (function() {
                 rerollTag(pIdx, tagKey);
                 renderTeamSummary(containerId);
                 window.Carrera.audio.playClick();
+                // Sync updated team to player view
+                syncTeamConfirmed();
             });
         });
     }
@@ -332,6 +395,15 @@ window.Carrera.characters = (function() {
         });
     }
 
+    // Load team from a campaign save (bypasses character selection)
+    function loadTeamFromCampaign(equipoCampaign) {
+        selectedPlayers = [];
+        equipoCampaign.forEach(function(p) {
+            selectedPlayers.push(JSON.parse(JSON.stringify(p)));
+        });
+        currentSlot = 0;
+    }
+
     // Init is now called from app.js after DOM is ready
     function initSlotClickHandlers() {
         // Handled dynamically in renderSlots() via event delegation
@@ -360,6 +432,8 @@ window.Carrera.characters = (function() {
         initSlotClickHandlers: initSlotClickHandlers,
         updateStartButton: updateStartButton,
         addPlayer: addPlayer,
-        removePlayer: removePlayer
+        removePlayer: removePlayer,
+        loadTeamFromCampaign: loadTeamFromCampaign,
+        syncTeamConfirmed: syncTeamConfirmed
     };
 })();

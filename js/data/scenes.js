@@ -19,7 +19,7 @@ window.Carrera.scenes = {
             {
                 id: '1b', texto: 'Buscar más pistas en los arbustos', emoji: '🔍',
                 requiereTirada: true, dificultad: 8,
-                tagsRelevantes: ['Olfato Rastreador', 'Visión de Águila', 'Ser Astuto', 'Orejas Giratorias'],
+                tagsRelevantes: ['Olfato Rastreador', 'Visión de Águila', 'Ser Astuto', 'Orejas Giratorias', 'Capa de Hojas', 'Mapa Antiguo'],
                 siguienteEscena: 'scene2',
                 resultados: {
                     critico: { texto: '¡Increíble! Entre las hojas encuentran OTRA pieza del mapa con un dibujo de una llave escondida bajo una piedra. ¡Esta pista será muy útil después!', reloj: 0, flag: 'pistaExtra' },
@@ -50,7 +50,7 @@ window.Carrera.scenes = {
         ambientPreset: 'river',
         backgroundClass: 'bg-river',
         narrativa: '¡Las Bestias llegan al río! El agua corre rápido entre piedras cubiertas de musgo verde y resbaladizo. Al otro lado, los árboles forman un túnel oscuro y misterioso. Hay piedras grandes para cruzar saltando, pero... ¡están muy resbaladizas!',
-        notasGM: '🎭 ESCENA: Río caudaloso, piedras resbaladizas, otro lado misterioso\n\n• Sonido de agua: "shhhhhh" con la boca\n• Mueve las manos como olas al narrar\n• Pregunta: "¿Cómo quieren cruzar?"\n• Si inventan algo creativo → baja dificultad -2\n• El panel de Tags te dice quién tiene ventaja\n• Juerga = caen al agua pero es DIVERTIDO, no peligroso\n• Acción: haz que se levanten y "salten" de una piedra a otra',
+        notasGM: '🎭 ESCENA: Río caudaloso, piedras resbaladizas, otro lado misterioso\n\n• Sonido de agua: "shhhhhh" con la boca\n• Mueve las manos como olas al narrar\n• Pregunta: "¿Cómo quieren cruzar?"\n• Si inventan algo creativo → baja dificultad -2\n• El panel de Tags te dice quién tiene ventaja\n• ¡Oh No! = caen al agua pero es DIVERTIDO, no peligroso\n• Acción: haz que se levanten y "salten" de una piedra a otra',
         opciones: [
             {
                 id: '2a', texto: '¡Saltar por las piedras!', emoji: '🦘',
@@ -175,7 +175,7 @@ window.Carrera.scenes = {
             {
                 id: '4c', texto: '¡Escabullirse sin que nos vea!', emoji: '🤫',
                 requiereTirada: true, dificultad: 12,
-                tagsRelevantes: ['Sigilo de las Sombras', 'Patas Silenciosas', 'Pelaje Oscuro como la Noche', 'Moverse Como el Viento', 'Ser Pequeño', 'Alas Silenciosas'],
+                tagsRelevantes: ['Sigilo de las Sombras', 'Patas Silenciosas', 'Pelaje Oscuro como la Noche', 'Moverse Como el Viento', 'Ser Pequeño', 'Alas Silenciosas', 'Capa de Hojas'],
                 siguienteEscena: 'scene5',
                 resultados: {
                     critico: { texto: '¡Las Bestias se mueven como ninjas! Pasan justo detrás de Don Gruñón mientras ronca en su sillón. ¡Ni se entera! Además, ven un cartel en la pared que dice "Gran Roble → Tesoro".', reloj: 0, flag: 'ayudaTejon' },
@@ -212,7 +212,7 @@ window.Carrera.scenes = {
             {
                 id: '5b', texto: 'Buscar la llave escondida', emoji: '🔑',
                 requiereTirada: true, dificultad: 10,
-                tagsRelevantes: ['Olfato Rastreador', 'Visión de Águila', 'Excavar Túneles', 'Pala de Piedra', 'Ser Astuto'],
+                tagsRelevantes: ['Olfato Rastreador', 'Visión de Águila', 'Excavar Túneles', 'Pala de Piedra', 'Ser Astuto', 'Mapa Antiguo'],
                 ventajaConFlags: ['ayudaTejon', 'pistaExtra', 'mapasTunel'],
                 siguienteEscena: 'victoria',
                 resultados: {
