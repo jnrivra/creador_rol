@@ -9,6 +9,8 @@ window.Carrera.playerView = (function() {
     var showingChapterCard = false;
     var pendingMessages = [];
     var chapterCardTimer = null;
+    var pendingChoices = null;  // Buffer choices until narrative typing finishes
+    var narrativeFinished = false;
 
     // Scene illustrations - emoji art compositions per scene
     var sceneIllustrations = {
@@ -201,6 +203,8 @@ window.Carrera.playerView = (function() {
         if (chapterCardTimer) { clearTimeout(chapterCardTimer); chapterCardTimer = null; }
         showingChapterCard = false;
         pendingMessages = [];
+        pendingChoices = null;
+        narrativeFinished = false;
         // Store scene number from GM
         lastSceneNum = data.sceneNum || null;
 
@@ -357,13 +361,36 @@ window.Carrera.playerView = (function() {
         el.textContent = '';
         el.style.display = 'block';
         el.classList.add('typing');
+        narrativeFinished = false;
         typeText(el, data.text || '', function() {
             el.classList.remove('typing');
+            narrativeFinished = true;
+            // Show buffered choices after a short beat
+            if (pendingChoices) {
+                var choicesData = pendingChoices;
+                pendingChoices = null;
+                setTimeout(function() {
+                    renderChoices(choicesData);
+                }, 1500);
+            }
         });
     }
 
     // === Choices ===
     function handleChoicesShow(data) {
+        // Buffer choices until narrative typing finishes
+        if (!narrativeFinished) {
+            pendingChoices = data;
+            return;
+        }
+        // Narrative already done — show after short delay
+        pendingChoices = null;
+        setTimeout(function() {
+            renderChoices(data);
+        }, 1500);
+    }
+
+    function renderChoices(data) {
         var el = document.getElementById('player-choices');
         if (!el) return;
         el.innerHTML = '';
