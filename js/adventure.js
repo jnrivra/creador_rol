@@ -77,6 +77,7 @@ window.Carrera.adventure = (function() {
 
         var opcion = scene.opciones[idx];
         state.playerDriven = true;
+        showPlayerToast('🎮 Jugadores eligieron: ' + opcion.emoji + ' ' + opcion.texto);
         addLog('🎮 Jugadores eligieron: ' + opcion.emoji + ' ' + opcion.texto);
         gmResolveOption(opcion);
     }
@@ -95,6 +96,8 @@ window.Carrera.adventure = (function() {
         // Mark as player-driven so resolution auto-sends
         state.playerDriven = true;
 
+        showPlayerToast('🎲 Jugadores tiraron: ' + rollValue);
+
         // Fill in the GM inline input and resolve
         var inlineInput = document.getElementById('gm-inline-roll-input');
         if (inlineInput) {
@@ -107,6 +110,8 @@ window.Carrera.adventure = (function() {
         if (state.pendingNextScene) {
             var nextId = state.pendingNextScene;
             state.pendingNextScene = null;
+            showPlayerToast('▶ Jugadores continúan la aventura');
+            addLog('🎮 Jugadores avanzan a siguiente escena');
             if (!checkRandomEvent(nextId)) {
                 loadScene(nextId);
             }
@@ -169,6 +174,7 @@ window.Carrera.adventure = (function() {
         }
 
         state.history.push(sceneId);
+        setPlayerState('🎬 Cargando escena...', 'state-typing');
         addLog('Escena cargada: ' + scene.emoji + ' ' + scene.titulo);
 
         // Track scene completion for XP (except first scene and victoria)
@@ -435,6 +441,7 @@ window.Carrera.adventure = (function() {
         var scene = window.Carrera.scenes[state.currentSceneId];
         if (!scene) return;
         window.Carrera.sync.send('narrative_show', { text: scene.narrativa });
+        setPlayerState('📖 Leyendo narrativa...', 'state-typing');
         addLog('📤 Narrativa enviada');
     }
 
@@ -467,6 +474,7 @@ window.Carrera.adventure = (function() {
         });
 
         window.Carrera.sync.send('choices_show', { choices: choices });
+        setPlayerState('🤔 Eligiendo opción...', 'state-choices');
         addLog('📤 Opciones enviadas');
     }
 
@@ -561,6 +569,7 @@ window.Carrera.adventure = (function() {
             ventaja: hasAdvantage,
             dieType: currentDie
         });
+        setPlayerState('🎲 Tirando d' + currentDie + '...', 'state-rolling');
 
         showInlineDiceResolver(opcion, hasAdvantage, diff);
         addLog('🎯 ' + opcion.texto + (hasAdvantage ? ' (ventaja)' : '') + ' — Dificultad ' + diff);
@@ -1166,6 +1175,7 @@ window.Carrera.adventure = (function() {
             var outcomeData = { text: resultado.texto, resultType: tipo, hasNext: !!opcion.siguienteEscena };
             if (clockWarning) outcomeData.clockWarning = clockWarning;
             window.Carrera.sync.send('outcome_show', outcomeData);
+            setPlayerState('📺 Esperando continuar...', 'state-continue');
             addLog('📖 Auto-resolución (player): ' + resultado.texto.substring(0, 60) + '...');
             showGMOutcome(resultado.texto, opcion.siguienteEscena, tipo);
         } else {
@@ -1281,6 +1291,7 @@ window.Carrera.adventure = (function() {
         if (clockWarning) outcomeData.clockWarning = clockWarning;
         if (nextSceneId) outcomeData.hasNext = true;
         window.Carrera.sync.send('outcome_show', outcomeData);
+        setPlayerState('📺 Esperando continuar...', 'state-continue');
 
         addLog('📖 Resolución enviada: ' + text.substring(0, 60) + '...');
 
@@ -1564,11 +1575,19 @@ window.Carrera.adventure = (function() {
         state.gameLog.unshift({ time: timestamp, text: text });
         if (state.gameLog.length > 50) state.gameLog.pop();
 
+        // Detect log category from prefix
+        var category = '';
+        if (text.indexOf('🎮') === 0) category = 'log-player';
+        else if (text.indexOf('🎲') === 0) category = 'log-dice';
+        else if (text.indexOf('📈') === 0) category = 'log-xp';
+        else if (text.indexOf('⚠️') === 0) category = 'log-error';
+        else if (text.indexOf('Escena') !== -1 || text.indexOf('🏆') === 0) category = 'log-scene';
+
         var container = document.getElementById('gm-log');
         if (container) {
             var entry = document.createElement('div');
-            entry.className = 'gm-log-entry';
-            entry.textContent = '[' + timestamp + '] ' + text;
+            entry.className = 'gm-log-entry' + (category ? ' ' + category : '');
+            entry.innerHTML = '<span class="gm-log-time">' + timestamp + '</span><span class="gm-log-text">' + escapeHtml(text) + '</span>';
             container.insertBefore(entry, container.firstChild);
 
             while (container.children.length > 50) {
@@ -1579,6 +1598,30 @@ window.Carrera.adventure = (function() {
         try {
             sessionStorage.setItem('carrera-game-log', JSON.stringify(state.gameLog));
         } catch (e) {}
+    }
+
+    // --- Player State Indicator ---
+
+    function setPlayerState(stateLabel, cssClass) {
+        var el = document.getElementById('gm-player-state');
+        if (!el) return;
+        el.textContent = stateLabel;
+        el.className = 'gm-player-state' + (cssClass ? ' ' + cssClass : '');
+    }
+
+    function showPlayerToast(text) {
+        var toast = document.getElementById('gm-player-toast');
+        if (!toast) return;
+        toast.textContent = text;
+        toast.classList.remove('hidden');
+        // Reset animation
+        toast.style.animation = 'none';
+        toast.offsetHeight;
+        toast.style.animation = '';
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(function() {
+            toast.classList.add('hidden');
+        }, 3000);
     }
 
     // --- Juergas Library ---

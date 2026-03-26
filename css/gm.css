@@ -734,6 +734,135 @@
     font-size: 0.55rem;
 }
 
+/* === Player State Indicator === */
+.gm-player-state {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.gm-player-state:empty {
+    display: none;
+}
+
+.gm-player-state.state-typing {
+    background: rgba(37, 99, 235, 0.2);
+    color: #93c5fd;
+}
+
+.gm-player-state.state-choices {
+    background: rgba(234, 179, 8, 0.2);
+    color: #fde047;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.gm-player-state.state-rolling {
+    background: rgba(168, 85, 247, 0.2);
+    color: #d8b4fe;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.gm-player-state.state-outcome {
+    background: rgba(34, 197, 94, 0.2);
+    color: #86efac;
+}
+
+.gm-player-state.state-continue {
+    background: rgba(244, 162, 97, 0.2);
+    color: #fdba74;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* === Player Action Toast === */
+.gm-player-toast {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(244, 162, 97, 0.4);
+    border-radius: 12px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: white;
+    z-index: 200;
+    animation: toastSlideDown 0.3s ease-out;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+}
+
+.gm-player-toast.hidden {
+    display: none;
+}
+
+@keyframes toastSlideDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* === Enhanced Game Log === */
+.gm-log {
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.5);
+    font-family: inherit;
+}
+
+.gm-log-entry {
+    padding: 0.2rem 0.4rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-radius: 3px;
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+}
+
+.gm-log-entry:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+.gm-log-time {
+    color: rgba(255,255,255,0.25);
+    font-size: 0.65rem;
+    flex-shrink: 0;
+    min-width: 42px;
+}
+
+.gm-log-text {
+    flex: 1;
+}
+
+.gm-log-entry.log-player {
+    color: #fbbf24;
+    background: rgba(234, 179, 8, 0.05);
+}
+
+.gm-log-entry.log-dice {
+    color: #d8b4fe;
+}
+
+.gm-log-entry.log-scene {
+    color: #93c5fd;
+    font-weight: 700;
+}
+
+.gm-log-entry.log-xp {
+    color: #86efac;
+}
+
+.gm-log-entry.log-error {
+    color: #f87171;
+}
+
 .gm-dice-header {
     display: flex;
     gap: 0.6rem;
