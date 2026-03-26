@@ -20,7 +20,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'forest',
                 backgroundClass: 'bg-forest-clearing',
                 narrativa: '¡Una mañana soleada en el Bosque de Bristley! Dos valientes Bestias encuentran un trozo de papel antiguo de los Titanes entre las raíces de un gran roble. Tiene dibujos extraños... ¡una flecha apunta hacia el río y hay una marca con forma de estrella!',
-                notasGM: '🎭 ESCENA: Claro del bosque, mañana soleada, pajaritos\n\n• Lee con EMOCIÓN y asombro: "¡¿Qué es ESTO?!"\n• Dibuja un mapa rápido en papel y dáselo\n• Deja que examinen el mapa 1 minuto\n• Pregunta: "¿Qué creen que significa la estrella?"\n• Si dudan: "¡La flecha señala hacia allá!"\n• Sonidos: pájaros (silbar), viento (soplar)\n• Esta escena es tutorial, sé generoso con pistas',
+                notasGM: '💡 IMPRO\n• Dibuja un mapa rápido en papel y dáselo\n• "¿Qué creen que significa la estrella?"\n• Silba como un pájaro\n\n🎨 AMBIENTA\n• Mañana soleada, brisa suave, olor a pino\n• El roble es GIGANTE, las raíces como serpientes\n• El papel es amarillento, cruje al tocarlo\n\n🔗 HACIA ESCENA 2\n• "El sonido del agua se oye a lo lejos..."\n• "¿Oyen eso? ¡Es el río!"',
                 opciones: [
                     {
                         id: '1a', texto: '¡Seguir la flecha hacia el río!', emoji: '🏃',
@@ -61,7 +61,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'river',
                 backgroundClass: 'bg-river',
                 narrativa: '¡Las Bestias llegan al río! El agua corre rápido entre piedras cubiertas de musgo verde y resbaladizo. Al otro lado, los árboles forman un túnel oscuro y misterioso. Hay piedras grandes para cruzar saltando, pero... ¡están muy resbaladizas!',
-                notasGM: '🎭 ESCENA: Río caudaloso, piedras resbaladizas, otro lado misterioso\n\n• Sonido de agua: "shhhhhh" con la boca\n• Mueve las manos como olas al narrar\n• Pregunta: "¿Cómo quieren cruzar?"\n• Si inventan algo creativo → baja dificultad -2\n• ¡Oh No! = caen al agua pero es DIVERTIDO\n• Acción: haz que se levanten y "salten" de una piedra a otra',
+                notasGM: '💡 IMPRO\n• Haz "shhhhhh" como el agua\n• "¡Las piedras están resbaladizas por el musgo verde!"\n• Si inventan algo creativo → baja dificultad -2\n\n🎨 AMBIENTA\n• Agua fría, cristalina, salpica las patitas\n• Peces curiosos asoman la cabeza\n• Al otro lado: árboles que forman un arco oscuro\n\n🎪 SI ¡OH NO!\n• Caen al agua = tobogán acuático, DIVERTIDO\n\n🔗 HACIA ESCENA 3\n• "Al otro lado, los árboles tapan toda la luz..."',
                 opciones: [
                     {
                         id: '2a', texto: '¡Saltar por las piedras!', emoji: '🦘',
@@ -109,7 +109,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'tunnel',
                 backgroundClass: 'bg-tunnel',
                 narrativa: '¡Dentro del túnel de ramas, todo está oscuro! Las hojas tapan la luz del sol. Se oyen susurros misteriosos... ¿son solo hojas movidas por el viento? ¿O algo más? De repente, ven algo brillar en la pared: ¡otra marca de los Titanes! Una mano con una flecha que apunta... ¡hacia abajo!',
-                notasGM: '🎭 ESCENA: Túnel oscuro de ramas, susurros, misterio\n\n• BAJA LA VOZ. Susurra: "ssshhhh... ¿oyen eso?"\n• Pídeles que cierren los ojos 5 segundos\n• Si tienen pistaExtra: "¿Recuerdan la llave bajo la piedra?"\n• La flecha hacia abajo = buscar bajo tierra\n• Haz crujidos con papeles o la mesa\n• Esta escena es para crear TENSIÓN antes de Don Gruñón',
+                notasGM: '💡 IMPRO\n• SUSURRA: "ssshhhh... ¿oyen eso?"\n• Pídeles cerrar los ojos 5 segundos\n• Haz crujidos con papeles o la mesa\n• Si pistaExtra: "¿Recuerdan la llave del mapa?"\n\n🎨 AMBIENTA\n• Oscuridad total, solo brillan los ojos\n• Telarañas rozando la cara\n• Olor a tierra húmeda y hongos\n• Goteo lejano: plic... plic...\n\n🔗 HACIA ESCENA 4\n• "Al fondo... ¿huele a galletas?"\n• "Una lucecita cálida al final del túnel"',
                 opciones: [
                     {
                         id: '3a', texto: 'Avanzar con cuidado en la oscuridad', emoji: '👀',
@@ -157,7 +157,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'den',
                 backgroundClass: 'bg-den',
                 narrativa: 'Al final del túnel hay una cueva pequeña y acogedora con una mesita, una tetera humeante y... ¡un tejón ENORME! Es Don Gruñón, y NO está contento de tener visitas. "¿¡QUIÉN ANDA AHÍ!? ¡FUERA DE MI CASA!" gruñe moviendo sus patitas.',
-                notasGM: '🎭 ESCENA: Cueva acogedora, tetera, tejón enfadado (pero bueno)\n\n• VOZ GRAVE DE GRUÑÓN: "¡¡GRRR!! ¡¡FUERA!!"\n• Espera la reacción de los niños (suelen reírse)\n• SECRETO: Don Gruñón está MUY solo, quiere amigos\n• Si le hablan bonito → llora de emoción (cómico)\n• SIEMPRE les deja pasar (incluso si falla, gruñe pero cede)',
+                notasGM: '💡 IMPRO\n• VOZ GRAVE: "¡¡GRRR!! ¿¡QUIÉN ANDA AHÍ!?"\n• Espera la reacción (se ríen siempre)\n• "¿Qué le decimos a Don Gruñón?"\n• Si bellotaRegalo: "¿Queréis darle algo...?"\n\n🎨 AMBIENTA\n• Cuevita acogedora con chimenea y alfombra\n• Tetera humeante, olor a manzanilla\n• Fotos en la pared de Gruñón... solo\n\n🤫 SECRETO\n• Gruñón está MUY solo, quiere amigos\n• SIEMPRE les deja pasar al final\n\n🔗 HACIA ESCENA 5\n• "Gruñón señala un sendero: el Gran Roble..."',
                 opciones: [
                     {
                         id: '4a', texto: 'Hablar amablemente con Don Gruñón', emoji: '💬',
@@ -205,7 +205,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'treasure',
                 backgroundClass: 'bg-treasure',
                 narrativa: '¡Las Bestias llegan al Gran Roble! Es el árbol más grande que han visto nunca. Entre sus raíces enormes, hay un muro de piedra antiguo... ¡es una casa de los Titanes! Y ahí, en un hueco del muro, BRILLA algo... ¡UNA CAJA DE METAL! Pero tiene un candado viejo y oxidado. ¿Cómo la abrirán?',
-                notasGM: '🎭 ESCENA: Gran Roble gigante, muro antiguo, cofre brillante\n\n• ¡MOMENTO CULMINANTE! Sube la voz, crea EMOCIÓN\n• Si ayudaTejon: "¿Recuerdan? ¡La piedra con forma de ❤️!"\n• Si pistaExtra: "¡El mapa tenía una llave dibujada!"\n• SIEMPRE se abre el cofre (cualquier resultado)\n• Haz cuenta atrás: "3... 2... 1..."',
+                notasGM: '💡 IMPRO\n• Cuenta atrás con los niños: "3... 2... 1..."\n• Si ayudaTejon: "¿La piedra con forma de ❤️?"\n• Si pistaExtra: "¡El mapa tenía una llave!"\n• SIEMPRE se abre (cualquier resultado)\n\n🎨 AMBIENTA\n• El roble es TAN grande que no ven la copa\n• Raíces como escaleras de gigante\n• El cofre brilla entre las hojas doradas\n• Bichos de luz revolotean alrededor\n\n🎁 PROPS\n• Dale "gemas" reales: canicas, piedras pintadas\n• Tira confetti si tienes',
                 esFinal: true,
                 opciones: [
                     {
@@ -257,7 +257,7 @@ window.Carrera = window.Carrera || {};
                 backgroundClass: 'bg-victory',
                 narrativa: '¡¡LAS BESTIAS LO LOGRARON!! ¡Han encontrado el legendario Tesoro de los Titanes! La caja brilla con gemas de todos los colores: rubíes rojos, zafiros azules, esmeraldas verdes y diamantes que brillan como estrellas. ¡Son las aventureras más valientes de todo el Bosque de Bristley! Todos los animales del bosque vienen a celebrar su hazaña. ¡HURRA!',
                 narrativaAgotados: '¡¡LAS BESTIAS LO LOGRARON!! Están cansadísimas, con las patitas temblando y los ojos medio cerrados... ¡pero lo consiguieron! El tesoro brilla ante ellas con gemas de todos los colores. Se acuestan sobre las hojas suaves junto al Gran Roble, abrazando las gemas, y se quedan dormiditas con una gran sonrisa. ¡Son las heroínas más valientes del Bosque de Bristley!',
-                notasGM: '🎭 FINAL: Celebración, alegría, premio\n\n• ¡¡CELEBRA!! Aplaude, grita, abraza → ¡HURRA!\n• Pregunta: "¿Qué van a hacer con el tesoro?"\n• Dale "gemas" reales: canicas, piedras pintadas, pegatinas\n• Pregunta final: "¿Quieren otra aventura?"',
+                notasGM: '💡 IMPRO\n• ¡CELEBRA! Aplaude, grita, choca los cinco\n• "¿Qué van a hacer con el tesoro?"\n• "¿Qué fue lo más divertido?"\n• "¿Quieren otra aventura?"\n\n🎨 AMBIENTA\n• Todos los animales del bosque aplauden\n• Arcoíris sobre el Gran Roble\n• Don Gruñón llora de alegría al fondo\n\n🎁 PROPS\n• Reparte "gemas": canicas, pegatinas brillantes\n• Foto del equipo victorioso',
                 esFinal: true,
                 opciones: []
             }

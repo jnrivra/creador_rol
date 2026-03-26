@@ -19,7 +19,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'tunnel',
                 backgroundClass: 'bg-tunnel',
                 narrativa: '¡Algo raro pasa en el Bosque de Bristley! El sol se ha escondido detrás de unas nubes oscuras y no quiere salir. Los animales del bosque están asustados. Una vieja tortuga se acerca: "Bestias valientes, la Piedra de Luz del claro central se ha apagado. Sin ella, ¡será noche eterna! Deben encontrar las tres Chispas Mágicas para encenderla de nuevo."',
-                notasGM: '🎭 ESCENA: Bosque oscurecido, animales asustados, tortuga sabia\n\n• Habla con voz de tortuga vieja: leeento\n• Describe cómo todo se oscurece poco a poco\n• Las 3 Chispas están en: Río Helado, Cueva Cristal, Árbol Antiguo\n• Pregunta: "¿Por dónde quieren empezar?"',
+                notasGM: '💡 IMPRO\n• Voz de tortuga vieja: muuuy leeento\n• "¿Por dónde quieren empezar?"\n• Describe cómo una sombra avanza por el suelo\n\n🎨 AMBIENTA\n• El cielo se oscurece como un eclipse lento\n• Los pájaros dejan de cantar de golpe\n• Hojas que caen sin viento\n• Los conejos se esconden en sus madrigueras\n\n🔗 HACIA ESCENA 2\n• "El río está cerca... pero suena diferente"',
                 opciones: [
                     {
                         id: 'bs1a', texto: '¡Buscar la primera Chispa en el río!', emoji: '💧',
@@ -60,7 +60,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'river',
                 backgroundClass: 'bg-river',
                 narrativa: '¡El río está diferente! El agua es oscura y fría, y hay remolinos pequeños que giran y giran. En el fondo, algo brilla con una luz azul tenue... ¡es la primera Chispa Mágica! Pero está atrapada bajo una roca en el fondo del río.',
-                notasGM: '🎭 ESCENA: Río oscuro, agua fría, brillo azul en el fondo\n\n• Describe el frío: "Brrrrr, el agua está heladísima"\n• Si tienen pistaRio: "¿Recuerdan la canción?"\n• Si tienen antorchas: la luz ayuda a ver mejor\n• La Chispa es pequeña como una canica brillante',
+                notasGM: '💡 IMPRO\n• "Brrrrr, ¡el agua está heladísima!"\n• Si pistaRio: "¿Recuerdan la canción?"\n• Si antorchas: "la luz revela algo azul abajo"\n\n🎨 AMBIENTA\n• Niebla sobre el agua oscura\n• Remolinos pequeños como mini-tornados\n• Una luz azul parpadea en el fondo\n• Hielo finito en las orillas\n\n🔗 HACIA ESCENA 3\n• "La Chispa brilla en sus patas... ¡una de tres!"\n• "Algo destella en una cueva cercana..."',
                 opciones: [
                     {
                         id: 'bs2a', texto: '¡Zambullirse a buscar la Chispa!', emoji: '🏊',
@@ -109,7 +109,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'tunnel',
                 backgroundClass: 'bg-tunnel',
                 narrativa: 'Más adentro del bosque oscuro, hay una cueva con paredes de cristal. La segunda Chispa Mágica flota en el centro, rodeada de espejos naturales que crean un laberinto de reflejos. Pero... ¡hay cientos de reflejos de la Chispa! ¿Cuál es la real?',
-                notasGM: '🎭 ESCENA: Cueva de cristales, reflejos, laberinto óptico\n\n• Describe los reflejos: "¡Hay Chispas por TODAS partes!"\n• Solo una es real, las demás son reflejos\n• Si tienen antorchas: la luz crea más reflejos (divertido)\n• Pista: la real es la única que no se mueve cuando te mueves',
+                notasGM: '💡 IMPRO\n• "¡Hay Chispas por TODAS partes! ¿Cuál es la real?"\n• Si antorchas: "la luz crea MÁS reflejos" (risa)\n• Pista: la real no se mueve cuando tú te mueves\n\n🎨 AMBIENTA\n• Paredes de cristal que reflejan el infinito\n• Sonido de campanitas al tocar los cristales\n• Arcoíris diminutos por todas partes\n• Eco de las voces que rebota y se multiplica\n\n🔗 HACIA ESCENA 4\n• "¡Dos de tres! Falta una..."\n• "Un crujido lejano... ¿un árbol?"',
                 opciones: [
                     {
                         id: 'bs3a', texto: 'Cerrar los ojos y sentir la Chispa', emoji: '🧘',
@@ -157,7 +157,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'forest',
                 backgroundClass: 'bg-forest-clearing',
                 narrativa: 'La tercera Chispa está en lo alto del árbol más viejo del bosque. Sus ramas llegan hasta las nubes oscuras. Pero el árbol está dormido y NO quiere que nadie suba. Sus ramas se mueven solas, bloqueando el camino. "¡Dejadme dormir!" gruñe con voz de madera.',
-                notasGM: '🎭 ESCENA: Árbol gigante vivo, ramas que se mueven, gruñón\n\n• Voz de árbol: grave, lenta, crujiente\n• El árbol no es malo, solo tiene sueño\n• Si le cantan o cuentan un cuento, se calma\n• La Chispa está en un nido en la copa\n• Pregunta: "¿Cómo convencen al árbol?"',
+                notasGM: '💡 IMPRO\n• Voz de árbol: grave, lenta, crujiente\n• "¿Cómo convencen al árbol?"\n• Si cantan → "¡Nadie me cantaba desde hace 100 años!"\n\n🎨 AMBIENTA\n• El árbol es TAN viejo que tiene musgo como barba\n• Las ramas se mueven como brazos perezosos\n• Nido brillante en la copa, inalcanzable\n• Bosteza y hace temblar las hojas\n\n🤫 SECRETO\n• No es malo, solo tiene mucho sueño\n• Se emociona si alguien le cuida\n\n🔗 HACIA ESCENA 5\n• "¡Tres Chispas! ¡Corran al claro central!"',
                 opciones: [
                     {
                         id: 'bs4a', texto: 'Cantarle una canción de cuna', emoji: '🎵',
@@ -205,7 +205,7 @@ window.Carrera = window.Carrera || {};
                 ambientPreset: 'treasure',
                 backgroundClass: 'bg-treasure',
                 narrativa: '¡Las Bestias tienen las tres Chispas Mágicas! Corren al claro central donde está la gran Piedra de Luz, una roca enorme con tres huecos en forma de estrella. La oscuridad es casi total ahora. Los animales del bosque las rodean, esperando. Es el momento de la verdad: ¡hay que colocar las Chispas!',
-                notasGM: '🎭 ESCENA FINAL: Claro central, Piedra de Luz, todos los animales\n\n• ¡MOMENTO ÉPICO! Cuenta atrás: "3... 2... 1..."\n• Cada Chispa en su hueco = flash de luz\n• Cuando las 3 están: ¡EXPLOSIÓN DE LUZ!\n• Describe cómo vuelve el sol lentamente\n• Todos los animales celebran',
+                notasGM: '💡 IMPRO\n• Cuenta atrás: "3... 2... 1... ¡LUZ!"\n• Cada Chispa = un flash de color diferente\n• SIEMPRE funciona (cualquier resultado)\n\n🎨 AMBIENTA\n• Todos los animales en círculo, conteniendo la respiración\n• Silencio total... y luego ¡EXPLOSIÓN de luz!\n• El sol vuelve poco a poco como un amanecer\n• Flores que se abren al instante\n\n🎁 PROPS\n• Enciende la linterna del móvil al decir "¡LUZ!"',
                 esFinal: true,
                 opciones: [
                     {
@@ -255,7 +255,7 @@ window.Carrera = window.Carrera || {};
                 backgroundClass: 'bg-victory',
                 narrativa: '¡¡LAS BESTIAS HAN DEVUELTO LA LUZ AL BOSQUE!! La Piedra de Luz brilla con más fuerza que nunca. El sol asoma entre las nubes y un arcoíris cruza todo el cielo. Los animales celebran con una gran fiesta: las ardillas tocan música con bellotas, los pájaros cantan a coro, y hasta Don Gruñón ha venido a bailar (bueno, a gruñir al ritmo). ¡Las Bestias son las HEROÍNAS del Bosque de Bristley!',
                 narrativaAgotados: '¡¡LAS BESTIAS LO HAN CONSEGUIDO!! Están agotadísimas, con los ojos medio cerrados y las patitas temblando... pero la Piedra de Luz BRILLA. El sol vuelve poco a poco y un arcoíris débil pero precioso aparece en el cielo. Los animales las tapan con hojas suaves y las arropan mientras duermen. ¡Son las heroínas más valientes del bosque!',
-                notasGM: '🎭 FINAL: ¡Celebración de la luz!\n\n• ¡CELEBRA! ¡La luz volvió!\n• Describe el arcoíris y la fiesta\n• Pregunta: "¿Qué quieren hacer en la fiesta?"',
+                notasGM: '💡 IMPRO\n• ¡CELEBRA! Choca los cinco, abrazo grupal\n• "¿Qué quieren hacer en la fiesta?"\n• "¿Qué animal del bosque quieren conocer?"\n\n🎨 AMBIENTA\n• Arcoíris doble cruza el cielo\n• Las ardillas tocan música con bellotas\n• Don Gruñón ha venido a bailar (gruñendo)\n• Luciérnagas hacen un espectáculo de luces',
                 esFinal: true,
                 opciones: []
             }
