@@ -1,4 +1,4 @@
-// Pool de Eventos Aleatorios (15 eventos)
+// Pool de Eventos Aleatorios (14 eventos)
 window.Carrera = window.Carrera || {};
 
 window.Carrera.randomEventDefs = [

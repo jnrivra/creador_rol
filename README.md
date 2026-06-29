@@ -8,9 +8,11 @@
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/Vanilla_JS-F7DF1E?logo=javascript&logoColor=black)
 ![Web Audio](https://img.shields.io/badge/Web_Audio_API-4285F4?logo=google-chrome&logoColor=white)
-![License](https://img.shields.io/badge/license-fan--made-orange)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-**8 characters** · **2 adventures** · **30 badges** · **15 items** · **15 random events** · **30+ scenes**
+**8 characters** · **2 adventures** · **30 badges** · **14 items** · **14 random events** · **12 scenes** · **100+ branching outcomes**
+
+[**▶ Live Demo**](https://jnrivra.github.io/creador_rol/) — open `index.html` (Game Master) and `player.html` (Player) side by side
 
 </div>
 
@@ -19,6 +21,18 @@
 ## What This Does
 
 This is a companion app for the tabletop RPG **"¡A la Carrera!"** (Scurry!) designed for parents playing with kids aged 4-8. The parent acts as Game Master on one screen while kids watch the story unfold on a second screen (TV/tablet). Kids pick options, roll physical dice, and the app handles narrative, sound effects, and visual feedback — turning a simple board game into a cinematic adventure.
+
+## Gallery
+
+AI-generated, Studio-Ghibli-inspired scene backgrounds and character portraits (the app falls back to CSS gradients and emoji art when images are absent).
+
+| Forest Clearing | Crystal River | Treasure Vault |
+|:---:|:---:|:---:|
+| ![Forest](assets/scenes/forest.png) | ![River](assets/scenes/river.png) | ![Treasure](assets/scenes/treasure.png) |
+
+| Rayo (Cheetah) | Sombra (Panther) | Astuto (Fox) | Sabia (Owl) | Brinco (Rabbit) |
+|:---:|:---:|:---:|:---:|:---:|
+| ![Guepardo](assets/characters/guepardo.png) | ![Pantera](assets/characters/pantera.png) | ![Zorro](assets/characters/zorro.png) | ![Buho](assets/characters/buho.png) | ![Conejo](assets/characters/conejo.png) |
 
 ## Architecture
 
@@ -51,8 +65,8 @@ flowchart LR
     subgraph Data["📦 Game Data"]
         BEST[🐆 bestiary.js<br>8 Characters]
         SCENES[🗺️ adventures/<br>2 Adventures]
-        ITEMS[💎 items.js<br>15 Items]
-        EVENTS[🎭 random-events.js<br>15 Events]
+        ITEMS[💎 items.js<br>14 Items]
+        EVENTS[🎭 random-events.js<br>14 Events]
         BADGES_D[🏅 badges-definitions.js<br>30 Badges]
     end
 
@@ -174,10 +188,9 @@ Players can also drive the game from `player.html` — clicking choices and ente
 │
 ├── js/data/                        # Game content (static data)
 │   ├── bestiary.js                 # 8 playable characters
-│   ├── items.js                    # 15 loot items (consumable/permanent/cosmetic)
+│   ├── items.js                    # 14 loot items (consumable/permanent/cosmetic)
 │   ├── badges-definitions.js       # 30 badges across 5 categories
-│   ├── random-events.js            # 15 random encounter events
-│   ├── scenes.js                   # Legacy scene file (not loaded)
+│   ├── random-events.js            # 14 random encounter events
 │   └── adventures/                 # Multi-adventure system
 │       ├── adventure-registry.js   # Registry pattern for adventure loading
 │       ├── tesoro-titanes.js       # Adventure 1: treasure hunt (beginner)
