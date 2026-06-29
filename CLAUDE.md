@@ -15,7 +15,7 @@ Kids RPG companion app (Scurry! board game). Dual-screen: GM (`index.html`) + Pl
 - Display strings (nombre, descripcion) use proper Spanish accents
 - Scene `backgroundClass` must match CSS: `bg-forest-clearing`, `bg-river`, `bg-tunnel`, `bg-den`, `bg-treasure`, `bg-victory`
 - Adventures self-register via `window.Carrera.adventureRegistry.register()`
-- `scenes.js` is a legacy duplicate — NOT loaded by HTML files
+- Mid-adventure checkpoint stored in `campaign.checkpoint` (sceneId, flags, clock, difficultyBonus); cleared on victory
 
 ## Player Interactivity
 Player can drive the entire game from `player.html`:
@@ -26,6 +26,12 @@ Player can drive the entire game from `player.html`:
 
 ## Testing
 No test framework. Validate JS syntax with `node -c <file>`. Adventure paths verified via simulation script (373,248 paths, 0 errors).
+
+## GM Keyboard Shortcuts (scene screen)
+- `Space` — focus dice input
+- `N` — send narrative · `C` — send choices · `R` — resend state · `T` — toggle team panel
+- `U` — undo last roll (kids miscount) · `M` — mute audio · `1-5` — jump to scene
+- `?` or `H` — show/hide shortcut overlay · `Esc` — close overlay
 
 ## File Protocol
 App works on `file://` — BroadcastChannel disabled, falls back to localStorage sync.

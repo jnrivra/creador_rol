@@ -1119,14 +1119,30 @@
             transition: all 0.2s;
         }
 
-        .has-cinematic-ui .choice-btn-interactive:hover {
+        .has-cinematic-ui .choice-btn-interactive:hover,
+        .has-cinematic-ui .choice-btn-interactive:focus-visible {
             transform: translateX(8px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.4);
             border-color: rgba(255,255,255,0.4);
+            outline: 3px solid #fde047;
+            outline-offset: 2px;
         }
 
         .choice-btn-interactive:active {
             transform: scale(0.97) !important;
+        }
+
+        /* High-contrast focus ring for keyboard users */
+        .player-roll-input:focus-visible,
+        .btn-player-roll:focus-visible,
+        .btn-player-continue:focus-visible {
+            outline: 3px solid #fde047 !important;
+            outline-offset: 2px;
+        }
+
+        /* Pulsing emphasis for roll prompt when waiting for kid action */
+        .roll-prompt {
+            animation: pulseGlow 2s ease-in-out infinite;
         }
 
         .choice-btn.choice-selected {

@@ -48,6 +48,26 @@
     75% { transform: rotate(5deg); }
 }
 
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 20px rgba(244, 162, 97, 0.5); transform: scale(1); }
+    50% { box-shadow: 0 0 40px rgba(244, 162, 97, 0.9); transform: scale(1.03); }
+}
+
+/* Respect prefers-reduced-motion — disable big motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
 @keyframes dieRoll {
     0% { transform: rotate(0deg) scale(1); }
     25% { transform: rotate(90deg) scale(0.9); }

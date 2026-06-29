@@ -10,7 +10,6 @@ Static game data files. All attach to `window.Carrera` namespace. No logic — p
 | `items.js` | `Carrera.itemDefs` | 15 loot items across 3 types |
 | `badges-definitions.js` | `Carrera.badgeDefs` | 30 achievement badges across 5 categories |
 | `random-events.js` | `Carrera.randomEventDefs` | 15 random encounter events |
-| `scenes.js` | _(legacy)_ | Duplicate of tesoro-titanes.js — **not loaded** |
 | `adventures/` | | Multi-adventure system (see [adventures/README.md](adventures/README.md)) |
 
 ## Characters (bestiary.js)

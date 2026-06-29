@@ -126,7 +126,8 @@
                 </div>
                 <div id="gm-player-toast" class="gm-player-toast hidden"></div>
                 <div class="gm-header-right">
-                    <button id="btn-mute" class="btn-icon" title="Silenciar">🔊</button>
+                    <button id="btn-help" class="btn-icon" title="Ver atajos del teclado (?)" aria-label="Mostrar ayuda de atajos">⌨️</button>
+                    <button id="btn-mute" class="btn-icon" title="Silenciar" aria-label="Silenciar audio">🔊</button>
                 </div>
             </div>
 
@@ -197,7 +198,10 @@
 
                     <!-- Dice History (dice input is now inline in options panel) -->
                     <div class="gm-card">
-                        <div class="gm-card-title">🎲 Historial de Dados</div>
+                        <div class="gm-card-title" style="justify-content:space-between;">
+                            <span>🎲 Historial de Dados</span>
+                            <button id="btn-undo-roll" class="btn-gm-small" title="Deshacer la última tirada (los niños se equivocaron contando)">↩️ Deshacer última</button>
+                        </div>
                         <div id="gm-last-roll"></div>
                         <div id="gm-dice-history" class="gm-dice-history"></div>
                     </div>
@@ -263,7 +267,7 @@
                     </div>
                 </div>
                 <div class="gm-shortcuts">
-                    <kbd>Espacio</kbd> Dado &nbsp; <kbd>N</kbd> Narrativa &nbsp; <kbd>C</kbd> Opciones &nbsp; <kbd>R</kbd> Reenviar &nbsp; <kbd>M</kbd> Mute &nbsp; <kbd>1</kbd>-<kbd>5</kbd> Escena
+                    <kbd>Espacio</kbd> Dado &nbsp; <kbd>N</kbd> Narrativa &nbsp; <kbd>C</kbd> Opciones &nbsp; <kbd>R</kbd> Reenviar &nbsp; <kbd>T</kbd> Equipo &nbsp; <kbd>U</kbd> Deshacer &nbsp; <kbd>M</kbd> Mute &nbsp; <kbd>1</kbd>-<kbd>5</kbd> Escena &nbsp; <kbd>?</kbd> Ayuda
                 </div>
             </div>
         </div>

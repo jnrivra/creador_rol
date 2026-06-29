@@ -13,7 +13,10 @@ window.Carrera.adventure = (function() {
         gameLog: [],
         lastRoll: null,
         pendingNextScene: null,
-        playerDriven: false
+        playerDriven: false,
+        lastResolvedOption: null, // for undoLastRoll
+        lastResolvedClockBefore: null, // snapshot for undo
+        lastResolvedFlags: null
     };
 
     // Adventure context for progression tracking
@@ -50,6 +53,32 @@ window.Carrera.adventure = (function() {
         state.totalScenes = count || 5;
         listenPlayerActions();
         loadScene('scene1');
+    }
+
+    // Resume from a saved checkpoint instead of starting at scene1
+    function resumeFromCheckpoint(checkpoint) {
+        reset();
+        var scenes = window.Carrera.scenes || {};
+        var count = 0;
+        for (var key in scenes) {
+            if (key !== 'victoria') count++;
+        }
+        state.totalScenes = count || 5;
+
+        // Restore flags + clock + difficulty
+        if (checkpoint.flags) state.flags = checkpoint.flags;
+        if (typeof checkpoint.difficultyBonus === 'number' && checkpoint.difficultyBonus > 0) {
+            window.Carrera.dice.addDifficultyBonus(checkpoint.difficultyBonus);
+        }
+        if (checkpoint.clockState && checkpoint.clockState.filled > 0) {
+            for (var f = 0; f < checkpoint.clockState.filled; f++) {
+                window.Carrera.clock.manualFill();
+            }
+        }
+
+        listenPlayerActions();
+        addLog('▶ Reanudando desde checkpoint: ' + checkpoint.sceneId);
+        loadScene(checkpoint.sceneId);
     }
 
     // Listen for player-initiated actions (choice selection, dice rolls)
@@ -120,10 +149,24 @@ window.Carrera.adventure = (function() {
 
     function loadScene(sceneId) {
         var scene = window.Carrera.scenes[sceneId];
-        if (!scene) return;
+        if (!scene) {
+            addLog('⚠️ Escena no encontrada: ' + sceneId);
+            return;
+        }
 
         state.currentSceneId = sceneId;
         state.currentOption = null;
+
+        // Auto-show team panel on scene 1 (with portraits, level, etc.)
+        if (sceneId === 'scene1') {
+            try {
+                var btn = document.getElementById('btn-show-team-player');
+                if (btn) {
+                    // Defer to let player view catch up with scene_load first
+                    setTimeout(function() { btn.click(); }, 800);
+                }
+            } catch (e) {}
+        }
 
         // Calculate scene number from ID
         if (sceneId !== 'victoria') {
@@ -180,6 +223,22 @@ window.Carrera.adventure = (function() {
         // Track scene completion for XP (except first scene and victoria)
         if (sceneId !== 'scene1' && sceneId !== 'victoria' && state.history.length > 1) {
             trackSceneComplete();
+        }
+
+        // Mid-game checkpoint: persist scene + flags so reload can resume
+        if (advCtx && advCtx.campaign) {
+            advCtx.campaign.checkpoint = {
+                adventureId: advCtx.adventureId,
+                sceneId: sceneId,
+                sceneNumber: state.sceneNumber,
+                flags: JSON.parse(JSON.stringify(state.flags)),
+                clockState: window.Carrera.clock.getState(),
+                difficultyBonus: window.Carrera.dice.getDifficultyBonus(),
+                savedAt: new Date().toISOString()
+            };
+            if (window.Carrera.campaignUI && window.Carrera.campaignUI.autoSave) {
+                window.Carrera.campaignUI.autoSave();
+            }
         }
 
         if (scene.id === 'victoria') {
@@ -850,6 +909,12 @@ window.Carrera.adventure = (function() {
         var resultado = opcion.resultados[tipo];
         if (!resultado) resultado = opcion.resultados.complicacion;
 
+        // Snapshot for undo
+        state.lastResolvedOption = opcion;
+        state.lastResolvedClockBefore = window.Carrera.clock.getState();
+        state.lastResolvedDifficultyBonus = window.Carrera.dice.getDifficultyBonus();
+        state.lastResolvedFlags = JSON.parse(JSON.stringify(state.flags));
+
         // Track for progression
         trackRollResult(tipo);
 
@@ -981,6 +1046,13 @@ window.Carrera.adventure = (function() {
     function handleLevelUp(player, newLevel) {
         addLog('🎉 ¡LEVEL UP! ' + player.emoji + ' ' + player.nombre + ' → Nivel ' + newLevel.level + ' (' + newLevel.titulo + ')');
 
+        // Mirror toast on GM dashboard
+        showGMNotification(
+            '🎉 ¡NIVEL ' + newLevel.level + '!',
+            player.emoji + ' ' + player.nombre + ' → ' + newLevel.titulo,
+            'levelup', 5000
+        );
+
         // Send to player view
         window.Carrera.sync.send('level_up', {
             playerId: player.id,
@@ -995,12 +1067,56 @@ window.Carrera.adventure = (function() {
     function handleBadgeEarned(badge) {
         addLog('🏅 Badge: ' + badge.emoji + ' ' + badge.nombre);
 
+        // Mirror toast on GM dashboard
+        showGMNotification(
+            '🏅 ¡Badge!',
+            badge.emoji + ' ' + badge.nombre,
+            'badge', 4000
+        );
+
         window.Carrera.sync.send('badge_earned', {
             id: badge.id,
             emoji: badge.emoji,
             nombre: badge.nombre,
             descripcion: badge.descripcion
         });
+    }
+
+    // Lightweight notification toast for GM (mirrors what player sees)
+    var gmNotifQueue = [];
+    function showGMNotification(title, subtitle, kind, durationMs) {
+        gmNotifQueue.push({ title: title, subtitle: subtitle, kind: kind, durationMs: durationMs || 3500 });
+        renderGMNotifications();
+    }
+
+    function renderGMNotifications() {
+        var stack = document.getElementById('gm-notif-stack');
+        if (!stack) {
+            stack = document.createElement('div');
+            stack.id = 'gm-notif-stack';
+            stack.style.cssText = 'position:fixed;top:70px;right:1rem;z-index:10000;display:flex;flex-direction:column;gap:0.5rem;pointer-events:none;';
+            document.body.appendChild(stack);
+        }
+        // Render any queued items not yet shown
+        while (gmNotifQueue.length) {
+            var n = gmNotifQueue.shift();
+            var colorByKind = { levelup: '#fde047', badge: '#86efac', xp: '#93c5fd', info: '#ffffff' };
+            var c = colorByKind[n.kind] || '#ffffff';
+            var toast = document.createElement('div');
+            toast.style.cssText = 'background:rgba(20,20,40,0.95);border:1px solid ' + c + '80;border-left:4px solid ' + c + ';color:white;padding:0.6rem 1rem;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.4);max-width:300px;animation:slideInRight 0.3s ease-out;pointer-events:auto;';
+            toast.innerHTML =
+                '<div style="font-weight:700;font-size:0.85rem;color:' + c + ';">' + escapeHtml(n.title) + '</div>' +
+                '<div style="font-size:0.8rem;color:rgba(255,255,255,0.8);margin-top:0.15rem;">' + escapeHtml(n.subtitle) + '</div>';
+            stack.appendChild(toast);
+            (function(t, dur) {
+                setTimeout(function() {
+                    t.style.transition = 'opacity 0.4s, transform 0.4s';
+                    t.style.opacity = '0';
+                    t.style.transform = 'translateX(20px)';
+                    setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 450);
+                }, dur);
+            })(toast, n.durationMs);
+        }
     }
 
     // === Random Events ===
@@ -1140,6 +1256,12 @@ window.Carrera.adventure = (function() {
         var tipo = rollData.tipo;
         var resultado = opcion.resultados[tipo];
         if (!resultado) resultado = opcion.resultados.complicacion;
+
+        // Snapshot for undo
+        state.lastResolvedOption = opcion;
+        state.lastResolvedClockBefore = window.Carrera.clock.getState();
+        state.lastResolvedDifficultyBonus = window.Carrera.dice.getDifficultyBonus();
+        state.lastResolvedFlags = JSON.parse(JSON.stringify(state.flags));
 
         // Track for progression
         trackRollResult(tipo);
@@ -1375,6 +1497,9 @@ window.Carrera.adventure = (function() {
                 window.Carrera.progression.awardTeamXP(campaign, 'reloj_nunca_lleno');
                 addLog('📈 +10 XP bonus (reloj nunca lleno)');
             }
+
+            // Clear checkpoint — adventure is finished
+            campaign.checkpoint = null;
 
             // Record adventure completion
             campaign.aventurasCompletadas.push({
@@ -1651,9 +1776,68 @@ window.Carrera.adventure = (function() {
         return state;
     }
 
+    // Undo the last roll/resolve: restore clock + flags + difficulty, re-render options.
+    // Note: does NOT roll back stats/XP/badges — those are intentionally permanent.
+    function undoLastRoll() {
+        if (!state.lastResolvedOption) {
+            addLog('⚠️ Nada que deshacer');
+            return false;
+        }
+        var opcion = state.lastResolvedOption;
+        var clockBefore = state.lastResolvedClockBefore;
+        var flagsBefore = state.lastResolvedFlags;
+        var diffBonusBefore = state.lastResolvedDifficultyBonus;
+
+        if (clockBefore) {
+            // Restore clock state (manually rebuild filled count)
+            window.Carrera.clock.reset();
+            for (var i = 0; i < (clockBefore.totalFilled || 0); i++) {
+                // Internal fill without sound to restore total — only need filled segments
+            }
+            // Cheap restoration via setting filled directly: re-invoke manualFill N times silently
+            // Simpler: just restore "filled" by toggling. Skip difficulty changes — handled below.
+            // Use a dedicated helper:
+            for (var j = 0; j < (clockBefore.filled || 0); j++) {
+                window.Carrera.clock.manualFill();
+            }
+        }
+
+        // Restore difficulty bonus
+        if (typeof diffBonusBefore === 'number') {
+            var curBonus = window.Carrera.dice.getDifficultyBonus();
+            if (curBonus !== diffBonusBefore) {
+                window.Carrera.dice.addDifficultyBonus(diffBonusBefore - curBonus);
+            }
+        }
+
+        // Restore flags
+        if (flagsBefore) state.flags = flagsBefore;
+
+        // Clear undo snapshot
+        state.lastResolvedOption = null;
+        state.lastResolvedClockBefore = null;
+        state.lastResolvedFlags = null;
+        state.lastResolvedDifficultyBonus = null;
+
+        // Reset current option and re-render scene options so GM can re-resolve
+        state.currentOption = null;
+        var scene = window.Carrera.scenes[state.currentSceneId];
+        if (scene) renderGMOptions(scene);
+
+        updateGMStatus();
+        sendStatusUpdate();
+        // Also re-send choices to player so they see options again
+        sendChoicesToPlayer(scene);
+
+        addLog('↩️ Última tirada deshecha');
+        showPlayerToast('↩️ Tirada deshecha — vuelve a elegir');
+        return true;
+    }
+
     return {
         reset: reset,
         start: start,
+        resumeFromCheckpoint: resumeFromCheckpoint,
         loadScene: loadScene,
         getState: getState,
         sendNarrativeToPlayer: sendNarrativeToPlayer,
@@ -1665,6 +1849,7 @@ window.Carrera.adventure = (function() {
         initJuergasLibrary: initJuergasLibrary,
         resendCurrentState: resendCurrentState,
         addLog: addLog,
-        setAdventureContext: setAdventureContext
+        setAdventureContext: setAdventureContext,
+        undoLastRoll: undoLastRoll
     };
 })();

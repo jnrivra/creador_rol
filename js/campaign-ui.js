@@ -115,17 +115,21 @@ window.Carrera.campaignUI = (function() {
         adventures.forEach(function(adv) {
             var isCompleted = completed.some(function(c) { return c.adventureId === adv.id; });
             var isLocked = avgLevel < adv.nivelRecomendado;
+            var canResume = activeCampaign.checkpoint && activeCampaign.checkpoint.adventureId === adv.id;
             var stars = '';
             for (var i = 0; i < adv.dificultad; i++) stars += '⭐';
 
             var cardClass = 'adventure-card';
             if (isLocked) cardClass += ' adventure-locked';
             if (isCompleted) cardClass += ' adventure-completed';
+            if (canResume) cardClass += ' adventure-resumable';
+
+            var resumeBadge = canResume ? '<span style="background:rgba(244,162,97,0.25);color:#f4a261;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:8px;margin-left:0.4rem;">▶ Continuar</span>' : '';
 
             html += '<div class="' + cardClass + '" data-id="' + adv.id + '">' +
                 '<div class="adventure-card-emoji">' + adv.emoji + '</div>' +
                 '<div class="adventure-card-info">' +
-                '<div class="adventure-card-title">' + esc(adv.titulo) + (isCompleted ? ' ✅' : '') + '</div>' +
+                '<div class="adventure-card-title">' + esc(adv.titulo) + (isCompleted ? ' ✅' : '') + resumeBadge + '</div>' +
                 '<div class="adventure-card-desc">' + esc(adv.descripcion) + '</div>' +
                 '<div class="adventure-card-meta">' +
                 '<span>' + stars + ' Dificultad</span>' +
@@ -172,12 +176,25 @@ window.Carrera.campaignUI = (function() {
         }
     }
 
-    function startAdventure(adventureId) {
+    function startAdventure(adventureId, forceFresh) {
         if (!activeCampaign) return;
 
         var registry = window.Carrera.adventureRegistry;
         var adventure = registry ? registry.get(adventureId) : null;
         if (!adventure) return;
+
+        // Detect resumable checkpoint for this adventure
+        var checkpoint = (activeCampaign.checkpoint && activeCampaign.checkpoint.adventureId === adventureId) ? activeCampaign.checkpoint : null;
+        if (checkpoint && !forceFresh) {
+            var savedScene = adventure.scenes[checkpoint.sceneId];
+            var label = savedScene ? (savedScene.emoji + ' ' + savedScene.titulo) : checkpoint.sceneId;
+            var doResume = confirm('Hay una partida sin terminar en esta aventura.\n\nÚltima escena: ' + label + '\n\n¿Quieres continuar desde donde lo dejaron?\n(Aceptar = continuar · Cancelar = empezar de nuevo)');
+            if (!doResume) {
+                activeCampaign.checkpoint = null;
+                window.Carrera.save.saveCampaign(activeCampaign);
+                checkpoint = null;
+            }
+        }
 
         // Store current adventure reference
         activeCampaign.aventuraActual = adventureId;
@@ -212,7 +229,13 @@ window.Carrera.campaignUI = (function() {
         // Switch to scene screen and start
         window.Carrera.app.showScreen('scene');
         window.Carrera.app.initGMDashboard();
-        window.Carrera.adventure.start();
+
+        if (checkpoint) {
+            // Resume mid-adventure
+            window.Carrera.adventure.resumeFromCheckpoint(checkpoint);
+        } else {
+            window.Carrera.adventure.start();
+        }
     }
 
     function showBadgesGallery(container) {
@@ -304,14 +327,39 @@ window.Carrera.campaignUI = (function() {
         });
     }
 
+    var lastSaveIndicatorTime = 0;
+
     // Auto-save campaign (called after scene resolution, victory, etc.)
     function autoSave() {
-        if (activeCampaign) {
-            var ok = window.Carrera.save.saveCampaign(activeCampaign);
-            if (!ok && window.Carrera.adventure) {
+        if (!activeCampaign) return;
+        var ok = window.Carrera.save.saveCampaign(activeCampaign);
+        if (!ok) {
+            if (window.Carrera.adventure) {
                 window.Carrera.adventure.addLog('⚠️ Error guardando campaña (almacenamiento lleno?)');
             }
+            return;
         }
+        // Throttled discreet save indicator (max once per 3s)
+        var now = Date.now();
+        if (now - lastSaveIndicatorTime < 3000) return;
+        lastSaveIndicatorTime = now;
+        showSaveIndicator();
+    }
+
+    function showSaveIndicator() {
+        var existing = document.getElementById('autosave-indicator');
+        if (existing) existing.remove();
+        var ind = document.createElement('div');
+        ind.id = 'autosave-indicator';
+        ind.style.cssText = 'position:fixed;bottom:1rem;right:1rem;background:rgba(20,20,40,0.85);color:#86efac;font-size:0.75rem;padding:0.35rem 0.8rem;border-radius:8px;border:1px solid rgba(134,239,172,0.3);z-index:9990;pointer-events:none;opacity:0;transition:opacity 0.3s;';
+        ind.textContent = '💾 Guardado';
+        document.body.appendChild(ind);
+        // Fade in then out
+        setTimeout(function() { ind.style.opacity = '1'; }, 20);
+        setTimeout(function() {
+            ind.style.opacity = '0';
+            setTimeout(function() { if (ind.parentNode) ind.parentNode.removeChild(ind); }, 350);
+        }, 1200);
     }
 
     function esc(str) {

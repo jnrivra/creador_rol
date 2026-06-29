@@ -14,6 +14,9 @@ window.Carrera.sync = (function() {
     var gmWindow = null;         // Reference to opener window (player side)
     var usePostMessage = false;
     var useBroadcastChannel = false;
+    var msgCounter = 0;          // monotonic counter so rapid duplicate sends remain unique
+    var seenMsgIds = {};         // dedupe ids across channels
+    var lastConnectionTime = 0;  // when player last responded (heartbeat tracking)
 
     function init(r) {
         role = r;
@@ -66,9 +69,12 @@ window.Carrera.sync = (function() {
             }, 3000);
             send('gm_ping', { time: Date.now() });
 
-            // Track disconnect
+            // Track disconnect — window.closed OR heartbeat silent for 8s
             setInterval(function() {
-                if (playerConnected && playerWindow && playerWindow.closed) {
+                if (!playerConnected) return;
+                var windowClosed = playerWindow && playerWindow.closed;
+                var heartbeatSilent = lastConnectionTime > 0 && (Date.now() - lastConnectionTime) > 8000;
+                if (windowClosed || heartbeatSilent) {
                     playerConnected = false;
                     updateConnectionIndicator(false);
                 }
@@ -97,12 +103,15 @@ window.Carrera.sync = (function() {
     }
 
     function send(type, data) {
+        msgCounter++;
         var msg = {
             _carrera: true,
             type: type,
             data: data || {},
             sender: role,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            seq: msgCounter,
+            id: role + '-' + Date.now() + '-' + msgCounter
         };
 
         // 1. postMessage (most reliable for file://)
@@ -121,12 +130,18 @@ window.Carrera.sync = (function() {
             try { channel.postMessage(msg); } catch (e) {}
         }
 
-        // 3. localStorage (always try as backup)
+        // 3. localStorage (always try as backup) — value must be unique each call so
+        //    the storage event always fires even when consecutive sends carry identical
+        //    payload. We embed the seq into the JSON itself (already done above).
         try {
             localStorage.setItem('carrera-sync-msg', JSON.stringify(msg));
             setTimeout(function() {
-                localStorage.removeItem('carrera-sync-msg');
-            }, 100);
+                // Only remove if our value is still there — avoid clobbering newer messages
+                var cur = localStorage.getItem('carrera-sync-msg');
+                if (cur && cur.indexOf('"id":"' + msg.id + '"') !== -1) {
+                    localStorage.removeItem('carrera-sync-msg');
+                }
+            }, 200);
         } catch (e) {}
     }
 
@@ -134,8 +149,22 @@ window.Carrera.sync = (function() {
         if (!msg || !msg.type) return;
         if (msg.sender === role) return;
 
+        // Dedupe across channels (postMessage + BroadcastChannel + storage may all fire)
+        if (msg.id) {
+            if (seenMsgIds[msg.id]) return;
+            seenMsgIds[msg.id] = Date.now();
+            // Keep seenMsgIds bounded
+            var keys = Object.keys(seenMsgIds);
+            if (keys.length > 200) {
+                // Drop the oldest 50
+                keys.sort(function(a, b) { return seenMsgIds[a] - seenMsgIds[b]; });
+                for (var k = 0; k < 50; k++) delete seenMsgIds[keys[k]];
+            }
+        }
+
         // Track player connection
         if (role === 'gm' && msg.type === 'player_ready') {
+            lastConnectionTime = Date.now();
             if (!playerConnected) {
                 playerConnected = true;
                 updateConnectionIndicator(true);

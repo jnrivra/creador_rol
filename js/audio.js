@@ -376,10 +376,10 @@ window.Carrera.audio = (function() {
         playNoteEcho(1046.5, now + 0.7, 0.5, 0.12, 'triangle'); // C6
         playNoteEcho(1318.5, now + 0.85, 0.4, 0.1, 'triangle'); // E6
 
-        // Sparkle
-        setTimeout(function() { playSparkle(); }, 500);
-        setTimeout(function() { playSparkle(); }, 700);
-        setTimeout(function() { playSparkle(); }, 1000);
+        // Sparkle (guarded — context may be gone)
+        setTimeout(function() { if (ctx) playSparkle(); }, 500);
+        setTimeout(function() { if (ctx) playSparkle(); }, 700);
+        setTimeout(function() { if (ctx) playSparkle(); }, 1000);
     }
 
     // FAILURE - Descending "wah-wah" trombone

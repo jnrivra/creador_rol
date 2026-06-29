@@ -135,6 +135,16 @@ window.Carrera.app = (function() {
             });
         }
 
+        // Undo last roll
+        var btnUndo = document.getElementById('btn-undo-roll');
+        if (btnUndo) {
+            btnUndo.addEventListener('click', function() {
+                if (window.Carrera.adventure.undoLastRoll) {
+                    window.Carrera.adventure.undoLastRoll();
+                }
+            });
+        }
+
         // Open player view
         var btnOpenPlayer = document.getElementById('btn-open-player');
         if (btnOpenPlayer) {
@@ -147,10 +157,17 @@ window.Carrera.app = (function() {
             });
         }
 
-        // Show team on player screen
+        // Show team on player screen (toggle: send team_show OR team_hide based on state)
         var btnShowTeam = document.getElementById('btn-show-team-player');
+        var teamVisible = false;
         if (btnShowTeam) {
             btnShowTeam.addEventListener('click', function() {
+                if (teamVisible) {
+                    window.Carrera.sync.send('team_hide', {});
+                    window.Carrera.adventure.addLog('📺 Equipo ocultado');
+                    teamVisible = false;
+                    return;
+                }
                 var team = window.Carrera.characters.getTeam();
                 var campaign = window.Carrera.campaignUI.getActiveCampaign();
                 var teamData = team.map(function(p) {
@@ -167,9 +184,14 @@ window.Carrera.app = (function() {
                 });
                 window.Carrera.sync.send('team_show', { team: teamData });
                 window.Carrera.adventure.addLog('📺 Equipo mostrado en pantalla');
+                teamVisible = true;
                 var orig = btnShowTeam.textContent;
                 btnShowTeam.textContent = '✅';
-                setTimeout(function() { btnShowTeam.textContent = orig; }, 1000);
+                setTimeout(function() {
+                    btnShowTeam.textContent = orig;
+                    // Player auto-hides after 20s, so reset our flag too
+                    setTimeout(function() { teamVisible = false; }, 19000);
+                }, 1000);
             });
         }
 
@@ -310,6 +332,12 @@ window.Carrera.app = (function() {
             });
         });
 
+        // Help button
+        var btnHelp = document.getElementById('btn-help');
+        if (btnHelp) {
+            btnHelp.addEventListener('click', function() { toggleShortcutHelp(); });
+        }
+
         // Mute button
         var btnMute = document.getElementById('btn-mute');
         if (btnMute) {
@@ -361,6 +389,21 @@ window.Carrera.app = (function() {
             if (e.key === 'n' || e.key === 'N') window.Carrera.adventure.sendNarrativeToPlayer();
             if (e.key === 'c' || e.key === 'C') window.Carrera.adventure.sendChoicesToPlayer();
             if (e.key === 'r' || e.key === 'R') window.Carrera.adventure.resendCurrentState();
+            if (e.key === 't' || e.key === 'T') {
+                var btnTeam = document.getElementById('btn-show-team-player');
+                if (btnTeam) btnTeam.click();
+            }
+            if (e.key === 'u' || e.key === 'U') {
+                if (window.Carrera.adventure.undoLastRoll) {
+                    window.Carrera.adventure.undoLastRoll();
+                }
+            }
+            if (e.key === '?' || e.key === 'h' || e.key === 'H') {
+                toggleShortcutHelp();
+            }
+            if (e.key === 'Escape') {
+                hideShortcutHelp();
+            }
 
             if (e.key >= '1' && e.key <= '5') {
                 window.Carrera.adventure.loadScene('scene' + e.key);
@@ -401,6 +444,56 @@ window.Carrera.app = (function() {
             if (campaign.equipo[i].id === playerId) return campaign.equipo[i];
         }
         return null;
+    }
+
+    function toggleShortcutHelp() {
+        var existing = document.getElementById('gm-shortcut-help');
+        if (existing) { existing.remove(); return; }
+
+        var overlay = document.createElement('div');
+        overlay.id = 'gm-shortcut-help';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease-out;';
+
+        var shortcuts = [
+            ['Espacio', 'Foco en input de dado'],
+            ['N', 'Enviar narrativa al jugador'],
+            ['C', 'Enviar opciones al jugador'],
+            ['R', 'Reenviar estado (reconectar)'],
+            ['T', 'Mostrar equipo en pantalla'],
+            ['U', 'Deshacer última tirada (si aplica)'],
+            ['M', 'Silenciar / activar audio'],
+            ['1 - 5', 'Saltar a escena 1-5'],
+            ['? / H', 'Mostrar / ocultar esta ayuda'],
+            ['Esc', 'Cerrar ayuda']
+        ];
+        var rowsHtml = shortcuts.map(function(s) {
+            return '<div style="display:flex;justify-content:space-between;padding:0.5rem 0.8rem;border-bottom:1px solid rgba(255,255,255,0.08);">' +
+                '<kbd style="background:rgba(255,255,255,0.1);padding:0.2rem 0.6rem;border-radius:4px;font-family:monospace;color:#fde047;">' + s[0] + '</kbd>' +
+                '<span style="color:rgba(255,255,255,0.8);font-size:0.9rem;">' + s[1] + '</span>' +
+                '</div>';
+        }).join('');
+
+        overlay.innerHTML =
+            '<div style="background:#1a1a2e;border:2px solid rgba(255,255,255,0.15);border-radius:14px;padding:1.5rem 2rem;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">' +
+            '<h3 style="color:#fde047;margin:0;font-size:1.2rem;">⌨️ Atajos del GM</h3>' +
+            '<button id="gm-shortcut-help-close" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.5rem;cursor:pointer;">✕</button>' +
+            '</div>' +
+            rowsHtml +
+            '<div style="margin-top:1rem;font-size:0.7rem;color:rgba(255,255,255,0.4);text-align:center;">Presiona <kbd style="background:rgba(255,255,255,0.1);padding:0.1rem 0.4rem;border-radius:3px;">?</kbd> o <kbd style="background:rgba(255,255,255,0.1);padding:0.1rem 0.4rem;border-radius:3px;">Esc</kbd> para cerrar</div>' +
+            '</div>';
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) overlay.remove();
+        });
+        document.body.appendChild(overlay);
+        var closeBtn = document.getElementById('gm-shortcut-help-close');
+        if (closeBtn) closeBtn.addEventListener('click', function() { overlay.remove(); });
+    }
+
+    function hideShortcutHelp() {
+        var existing = document.getElementById('gm-shortcut-help');
+        if (existing) existing.remove();
     }
 
     function showScreen(screenId) {

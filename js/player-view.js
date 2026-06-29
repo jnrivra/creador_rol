@@ -48,7 +48,8 @@ window.Carrera.playerView = (function() {
         });
 
         // Always apply cinematic UI enhancements (serif fonts, glassmorphism, etc.)
-        document.querySelector('.player-wrap').classList.add('has-cinematic-ui');
+        var wrap = document.querySelector('.player-wrap');
+        if (wrap) wrap.classList.add('has-cinematic-ui');
 
         // Preload images — sets cinematicMode for parallax + cinematic transitions
         if (window.Carrera.images) {
@@ -402,22 +403,28 @@ window.Carrera.playerView = (function() {
                 div.className = 'choice-btn choice-btn-interactive';
                 div.style.animationDelay = (i * 0.15) + 's';
                 div.style.cursor = 'pointer';
+                // Keyboard a11y: focusable + ARIA role
+                div.setAttribute('role', 'button');
+                div.setAttribute('tabindex', '0');
+                div.setAttribute('aria-label', (choice.texto || '') + (choice.badge ? ' — ' + choice.badge : ''));
                 div.innerHTML =
-                    '<span class="choice-emoji">' + esc(choice.emoji || '') + '</span>' +
+                    '<span class="choice-emoji" aria-hidden="true">' + esc(choice.emoji || '') + '</span>' +
                     '<span class="choice-text">' + esc(choice.texto || '') + '</span>';
 
                 if (choice.badge) {
                     div.innerHTML += '<span class="choice-badge ' + (choice.badgeClass || '') + '">' + esc(choice.badge) + '</span>';
                 }
 
-                // Player can click to select this choice
+                // Player can click or press Enter/Space to select this choice
                 (function(index) {
-                    div.addEventListener('click', function() {
+                    var pick = function() {
                         // Highlight selected, disable others
                         el.querySelectorAll('.choice-btn').forEach(function(btn) {
                             btn.classList.remove('choice-selected');
                             btn.style.pointerEvents = 'none';
                             btn.style.opacity = '0.4';
+                            btn.setAttribute('aria-disabled', 'true');
+                            btn.removeAttribute('tabindex');
                         });
                         div.classList.add('choice-selected');
                         div.style.opacity = '1';
@@ -425,13 +432,27 @@ window.Carrera.playerView = (function() {
                         // Send selection to GM
                         window.Carrera.sync.send('player_choice_select', { index: index });
                         safePlayEffect('click');
+                    };
+                    div.addEventListener('click', pick);
+                    div.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            pick();
+                        }
                     });
                 })(i);
 
                 el.appendChild(div);
             });
 
-            setTimeout(function() { el.style.opacity = '1'; }, 100);
+            setTimeout(function() {
+                el.style.opacity = '1';
+                // Auto-focus first choice for keyboard users
+                var first = el.querySelector('.choice-btn-interactive');
+                if (first && typeof first.focus === 'function') {
+                    try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); }
+                }
+            }, 100);
         }
     }
 
@@ -596,6 +617,9 @@ window.Carrera.playerView = (function() {
             rollInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') submitPlayerRoll(rollInput);
             });
+            rollInput.setAttribute('aria-label', '¡Tira el d' + dieType + ' y escribe el número aquí!');
+            // Auto-focus so kids can just type immediately on tablet/laptop
+            setTimeout(function() { try { rollInput.focus(); } catch(e) {} }, 200);
         }
 
         safePlayEffect('suspense');
@@ -603,8 +627,16 @@ window.Carrera.playerView = (function() {
 
     function submitPlayerRoll(inputEl) {
         var val = parseInt(inputEl.value, 10);
-        if (isNaN(val) || val < 1) {
-            inputEl.focus();
+        var max = parseInt(inputEl.max, 10) || 20;
+        if (isNaN(val) || val < 1 || val > max) {
+            // Visual error feedback (shake + red border briefly)
+            inputEl.style.borderColor = '#ef4444';
+            inputEl.style.animation = 'shake 0.4s';
+            setTimeout(function() {
+                inputEl.style.borderColor = '';
+                inputEl.style.animation = '';
+            }, 600);
+            try { inputEl.focus(); inputEl.select(); } catch(e) {}
             return;
         }
         // Send roll value to GM for resolution
@@ -655,10 +687,13 @@ window.Carrera.playerView = (function() {
         }
 
         panel.innerHTML = html;
-        document.querySelector('.player-wrap').appendChild(panel);
+        var wrap = document.querySelector('.player-wrap');
+        if (!wrap) return;
+        wrap.appendChild(panel);
 
-        // Auto-hide after 15 seconds
-        setTimeout(function() { handleTeamHide(); }, 15000);
+        // Make team panel dismissible: click anywhere on it or wait 20s
+        panel.addEventListener('click', function() { handleTeamHide(); });
+        setTimeout(function() { handleTeamHide(); }, 20000);
     }
 
     function handleTeamHide() {
@@ -906,21 +941,55 @@ window.Carrera.playerView = (function() {
     }
 
     // === Typing ===
+    var activeSkipHandlers = []; // track listeners so we can clean up on cancel
+
     function cancelTyping() {
         if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
+        // Remove any pending skip-to-end listeners from previous typeText calls
+        while (activeSkipHandlers.length) {
+            var h = activeSkipHandlers.pop();
+            try { h.el.removeEventListener('click', h.fn); } catch(e) {}
+            try { document.removeEventListener('keydown', h.kfn); } catch(e) {}
+        }
     }
 
     function typeText(element, text, callback) {
         cancelTyping();
+        // Respect reduced motion preference — render full text immediately
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            element.textContent = text || '';
+            if (callback) callback();
+            return;
+        }
         var i = 0;
         var speed = 18;
+        var done = false;
         element.textContent = '';
 
-        function skipToEnd() {
-            cancelTyping();
-            element.textContent = text;
-            element.removeEventListener('click', skipToEnd);
+        function finish() {
+            if (done) return;
+            done = true;
+            try { element.removeEventListener('click', skipToEnd); } catch(e) {}
+            try { document.removeEventListener('keydown', keySkip); } catch(e) {}
+            // Remove from tracking
+            for (var j = activeSkipHandlers.length - 1; j >= 0; j--) {
+                if (activeSkipHandlers[j].el === element) activeSkipHandlers.splice(j, 1);
+            }
             if (callback) callback();
+        }
+
+        function skipToEnd() {
+            if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
+            element.textContent = text;
+            finish();
+        }
+
+        function keySkip(e) {
+            // Space or Enter or Backspace skips ahead
+            if (e.key === ' ' || e.key === 'Enter' || e.key === 'Backspace') {
+                e.preventDefault();
+                skipToEnd();
+            }
         }
 
         function type() {
@@ -929,12 +998,13 @@ window.Carrera.playerView = (function() {
                 i++;
                 typeTimer = setTimeout(type, speed);
             } else {
-                element.removeEventListener('click', skipToEnd);
-                if (callback) callback();
+                finish();
             }
         }
 
         element.addEventListener('click', skipToEnd);
+        document.addEventListener('keydown', keySkip);
+        activeSkipHandlers.push({ el: element, fn: skipToEnd, kfn: keySkip });
         type();
     }
 
@@ -1063,7 +1133,9 @@ window.Carrera.playerView = (function() {
             '<div class="levelup-unlock">' + esc(data.desbloqueo) + '</div>' +
             '</div>';
 
-        document.querySelector('.player-wrap').appendChild(overlay);
+        var wrap = document.querySelector('.player-wrap');
+        if (!wrap) return;
+        wrap.appendChild(overlay);
 
         // Launch confetti
         setTimeout(function() { launchConfetti(); }, 300);
@@ -1089,7 +1161,9 @@ window.Carrera.playerView = (function() {
             '<div class="badge-toast-name">' + esc(data.nombre) + '</div>' +
             '</div>';
 
-        document.querySelector('.player-wrap').appendChild(toast);
+        var bwrap = document.querySelector('.player-wrap');
+        if (!bwrap) return;
+        bwrap.appendChild(toast);
 
         // Auto-dismiss after 4 seconds
         setTimeout(function() {
@@ -1125,7 +1199,9 @@ window.Carrera.playerView = (function() {
             '<div class="loot-cards">' + cardsHtml + '</div>' +
             '</div>';
 
-        document.querySelector('.player-wrap').appendChild(overlay);
+        var lwrap = document.querySelector('.player-wrap');
+        if (!lwrap) return;
+        lwrap.appendChild(overlay);
 
         setTimeout(function() { launchConfetti(); }, 800);
 
